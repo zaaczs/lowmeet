@@ -167,3 +167,87 @@
     padding: 0;
   }
 }
+
+.form-evento {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px #0001;
+  padding: 2rem;
+  max-width: 700px;
+  margin: 2rem auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+.form-row {
+  display: flex;
+  gap: 1rem;
+}
+.form-row input,
+.form-row textarea {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 1rem;
+  background: #f9fafb;
+  resize: none;
+}
+.form-row textarea {
+  min-height: 80px;
+}
+.form-evento button.cta-button {
+  width: fit-content;
+  align-self: flex-end;
+  margin-top: 1rem;
+}
+@media (max-width: 900px) {
+  .form-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .form-evento {
+    padding: 1rem;
+  }
+}
+
+body,
+.main-content,
+.main-content h2,
+.main-content h3,
+.main-content p,
+.main-content ul,
+.main-content li {
+  color: #181818 !important;
+}
+
+.form-row input,
+.form-row textarea {
+  color: #181818;
+}
+
+.form-row input::placeholder,
+.form-row textarea::placeholder {
+  color: #444;
+  opacity: 1;
+}
+
+.form-evento p {
+  color: #181818 !important;
+}
+
+/* Garantir que cards de eventos e mensagens também fiquem pretos */
+.feature-card h3,
+.feature-card p {
+  color: #181818;
+}
+
+li,
+ul,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: #181818;
+}

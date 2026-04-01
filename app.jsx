@@ -1,7 +1,7 @@
 // src/App.jsx
 import { Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
-import Login from "./pages/Login";
+import Login from "./initialpages/Login";
 import CreateEvent from "./pages/CreateEvent";
 import EventDetails from "./pages/EventDetails";
 

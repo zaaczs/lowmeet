@@ -169,23 +169,25 @@
 }
 
 .form-evento {
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px #0001;
-  padding: 2rem;
-  max-width: 700px;
+  max-width: 400px;
   margin: 2rem auto;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+  padding: 2rem;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
+
 .form-row {
   display: flex;
   gap: 1rem;
+  flex-wrap: wrap; /* Permite que os campos quebrem para a próxima linha */
+  margin-bottom: 1rem;
 }
+
 .form-row input,
 .form-row textarea {
-  flex: 1;
+  flex: 1; /* Faz com que os campos ocupem o mesmo espaço */
+  min-width: 150px; /* Define uma largura mínima para os campos */
   padding: 0.75rem 1rem;
   border: 1px solid #d1d5db;
   border-radius: 6px;
@@ -193,19 +195,31 @@
   background: #f9fafb;
   resize: none;
 }
+
+.form-row input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 1rem;
+}
+
 .form-row textarea {
   min-height: 80px;
 }
+
 .form-evento button.cta-button {
   width: fit-content;
   align-self: flex-end;
   margin-top: 1rem;
 }
+
 @media (max-width: 900px) {
   .form-row {
     flex-direction: column;
     gap: 0.5rem;
   }
+
   .form-evento {
     padding: 1rem;
   }

@@ -11,7 +11,6 @@ const firebaseConfig = {
   storageBucket: "lowmeet-3027c.appspot.com",
   messagingSenderId: "912377270301",
   appId: "1:912377270301:web:86cf0a2e4df5d108beb6f4",
-  // ❌ measurementId é opcional e não necessário para nossa aplicação atual
 };
 
 // Inicialização do Firebase App

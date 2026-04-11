@@ -36,23 +36,12 @@ function BannerCarousel({ position = "topo", compact = false, currentState = "",
         return byPosition;
       }
 
-      const cityBanners = byPosition.filter((banner) => {
-        const level = banner.targetingLevel || "NATIONAL";
-        if (level !== "CITY") return false;
+      return byPosition.filter((banner) => {
         return (
           normalizeTextKey(banner.state) === stateKey &&
           normalizeTextKey(banner.city) === cityKey
         );
       });
-      if (cityBanners.length > 0) return cityBanners;
-
-      const stateBanners = byPosition.filter((banner) => {
-        const level = banner.targetingLevel || "NATIONAL";
-        return level === "STATE" && normalizeTextKey(banner.state) === stateKey;
-      });
-      if (stateBanners.length > 0) return stateBanners;
-
-      return byPosition.filter((banner) => (banner.targetingLevel || "NATIONAL") === "NATIONAL");
     },
     [byPosition, cityKey, hasCityTargeting, stateKey]
   );

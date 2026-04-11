@@ -30,19 +30,23 @@ function SponsorsPage() {
   const hasCityTargeting = Boolean(resolvedState && resolvedCity);
   const stateKey = normalizeTextKey(resolvedState);
   const cityKey = normalizeTextKey(resolvedCity);
-  const hasCitySponsor = activeBanners.some(
+  const citySponsors = activeBanners.filter(
     (banner) =>
-      (banner.targetingLevel || "NATIONAL") === "CITY" &&
       normalizeTextKey(banner.state) === stateKey &&
       normalizeTextKey(banner.city) === cityKey
   );
+  const hasCitySponsor = citySponsors.length > 0;
   const shouldShowCityPlaceholder = hasCityTargeting && !hasCitySponsor;
 
-  const sponsors = Array.from(
+  const allSponsors = Array.from(
     new Map(
       activeBanners.map((banner) => [banner.brandName, banner])
     ).values()
   );
+  const citySponsorsUnique = Array.from(
+    new Map(citySponsors.map((banner) => [banner.brandName, banner])).values()
+  );
+  const sponsors = hasCityTargeting && hasCitySponsor ? citySponsorsUnique : allSponsors;
 
   return (
     <div className="space-y-6">

@@ -256,8 +256,6 @@ const BANNER_POSITION_LABELS = {
   "events-bottom": "Eventos - Final da página",
 };
 const BANNER_TARGETING_LABELS = {
-  NATIONAL: "Nacional",
-  STATE: "Por estado",
   CITY: "Por cidade",
 };
 
@@ -648,7 +646,7 @@ function AdminDashboardPage() {
     image: "",
     link: "",
     position: "home-top",
-    targetingLevel: "NATIONAL",
+    targetingLevel: "CITY",
     state: "",
     city: "",
     focusY: 50,
@@ -1095,7 +1093,7 @@ function AdminDashboardPage() {
       image: banner.image,
       link: banner.link,
       position: banner.position,
-      targetingLevel: banner.targetingLevel || "NATIONAL",
+      targetingLevel: "CITY",
       state: banner.state || "",
       city: banner.city || "",
       focusY: Number(banner.focusY ?? 50),
@@ -1833,21 +1831,6 @@ function AdminDashboardPage() {
                             <option value="events-bottom">Eventos - Final da página</option>
                           </Select>
                           <Select
-                            value={bannerEditForm.targetingLevel}
-                            onChange={(event) =>
-                              setBannerEditForm((prev) => ({
-                                ...prev,
-                                targetingLevel: event.target.value,
-                                state: event.target.value === "NATIONAL" ? "" : prev.state,
-                                city: event.target.value === "CITY" ? prev.city : "",
-                              }))
-                            }
-                          >
-                            <option value="NATIONAL">Nacional</option>
-                            <option value="STATE">Por estado</option>
-                            <option value="CITY">Por cidade</option>
-                          </Select>
-                          <Select
                             value={bannerEditForm.state}
                             onChange={(event) =>
                               setBannerEditForm((prev) => ({
@@ -1856,7 +1839,7 @@ function AdminDashboardPage() {
                                 city: "",
                               }))
                             }
-                            disabled={bannerEditForm.targetingLevel === "NATIONAL"}
+                            disabled={false}
                           >
                             <option value="">
                               {loadingBannerStates ? "Carregando estados..." : "Selecione o estado"}
@@ -1875,16 +1858,14 @@ function AdminDashboardPage() {
                                 city: event.target.value,
                               }))
                             }
-                            disabled={bannerEditForm.targetingLevel !== "CITY" || !bannerEditForm.state}
+                            disabled={!bannerEditForm.state}
                           >
                             <option value="">
-                              {bannerEditForm.targetingLevel !== "CITY"
-                                ? "Disponível apenas para segmentação por cidade"
-                                : !bannerEditForm.state
-                                  ? "Selecione o estado primeiro"
-                                  : loadingBannerCities
-                                    ? "Carregando cidades..."
-                                    : "Selecione a cidade"}
+                              {!bannerEditForm.state
+                                ? "Selecione o estado primeiro"
+                                : loadingBannerCities
+                                  ? "Carregando cidades..."
+                                  : "Selecione a cidade"}
                             </option>
                             {bannerCityOptions.map((city) => (
                               <option key={city} value={city}>
@@ -1946,7 +1927,7 @@ function AdminDashboardPage() {
                               Segmento: {banner.type}
                             </p>
                             <p className="text-muted-foreground">
-                              Segmentação: {BANNER_TARGETING_LABELS[banner.targetingLevel || "NATIONAL"]}{" "}
+                              Segmentação: {BANNER_TARGETING_LABELS[banner.targetingLevel || "CITY"]}{" "}
                               {banner.state ? `- ${banner.state}` : ""}
                               {banner.city ? ` / ${banner.city}` : ""}
                             </p>

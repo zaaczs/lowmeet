@@ -14,8 +14,6 @@ const STORAGE_FAVORITES = "lowmeet_favorites_by_user";
 const STORAGE_NOTIFICATIONS = "lowmeet_notifications_by_user";
 const STORAGE_BANNER_CLICKS = "lowmeet_banner_clicks";
 const BANNER_TARGETING_LEVELS = {
-  NATIONAL: "NATIONAL",
-  STATE: "STATE",
   CITY: "CITY",
 };
 
@@ -32,16 +30,14 @@ function normalizeTextKey(value) {
 }
 
 function normalizeBannerTargeting(rawBanner) {
-  const normalizedLevel = Object.values(BANNER_TARGETING_LEVELS).includes(rawBanner?.targetingLevel)
-    ? rawBanner.targetingLevel
-    : BANNER_TARGETING_LEVELS.NATIONAL;
+  const normalizedLevel = BANNER_TARGETING_LEVELS.CITY;
   const normalizedState = String(rawBanner?.state || "").trim().toUpperCase();
   const normalizedCity = String(rawBanner?.city || "").trim();
   return {
     ...rawBanner,
     targetingLevel: normalizedLevel,
-    state: normalizedLevel === BANNER_TARGETING_LEVELS.NATIONAL ? "" : normalizedState,
-    city: normalizedLevel === BANNER_TARGETING_LEVELS.CITY ? normalizedCity : "",
+    state: normalizedState,
+    city: normalizedCity,
   };
 }
 
@@ -72,51 +68,25 @@ function sanitizeBanners(sourceBanners) {
 
 function appendMissingDefaultBanners(sourceBanners) {
   const normalizedIncoming = sourceBanners.map((banner) => normalizeBannerTargeting(banner));
-  const byId = new Map(normalizedIncoming.map((banner) => [banner.id, banner]));
-
-  mockBanners.forEach((defaultBanner) => {
-    const normalizedDefault = normalizeBannerTargeting(defaultBanner);
-    const existing = byId.get(normalizedDefault.id);
-    if (!existing) {
-      byId.set(normalizedDefault.id, normalizedDefault);
-      return;
-    }
-
-    // Mantém campos customizáveis do admin, mas padroniza os banners base por id.
-    byId.set(normalizedDefault.id, {
-      ...existing,
-      ...normalizedDefault,
-      active: existing.active ?? normalizedDefault.active,
-      link: existing.link || normalizedDefault.link,
-      focusY: existing.focusY ?? normalizedDefault.focusY,
-    });
-  });
-
-  return Array.from(byId.values());
+  const existingIds = new Set(normalizedIncoming.map((banner) => banner.id));
+  const missing = sanitizeBanners(mockBanners).filter((banner) => !existingIds.has(banner.id));
+  if (missing.length === 0) return normalizedIncoming;
+  return [...normalizedIncoming, ...missing];
 }
 
 export function AppDataProvider({ children }) {
   const validateBannerCoverage = (nextBanner, targetBannerId = null) => {
     if (!nextBanner?.active) return;
-    if (nextBanner.targetingLevel === BANNER_TARGETING_LEVELS.NATIONAL) return;
     if (!nextBanner.position) return;
-    if (!nextBanner.state) {
-      throw new Error("Selecione o estado para segmentação geográfica.");
+    if (!nextBanner.state || !nextBanner.city) {
+      throw new Error("Selecione estado e cidade para cadastrar o banner.");
     }
-    if (
-      nextBanner.targetingLevel === BANNER_TARGETING_LEVELS.CITY &&
-      (!nextBanner.state || !nextBanner.city)
-    ) {
-      throw new Error("Para segmentação por cidade, selecione estado e cidade.");
-    }
-    if (nextBanner.targetingLevel !== BANNER_TARGETING_LEVELS.CITY) return;
 
     const targetStateKey = normalizeTextKey(nextBanner.state);
     const targetCityKey = normalizeTextKey(nextBanner.city);
     const hasConflict = banners.some((banner) => {
       if (!banner.active) return false;
       if (banner.id === targetBannerId) return false;
-      if (banner.targetingLevel !== BANNER_TARGETING_LEVELS.CITY) return false;
       return (
         normalizeTextKey(banner.state) === targetStateKey &&
         normalizeTextKey(banner.city) === targetCityKey

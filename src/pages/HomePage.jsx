@@ -7,20 +7,55 @@ import { useAppData } from "../context/AppDataContext";
 import { useAuth } from "../context/AuthContext";
 import { useSearchSuggestions } from "../hooks/useSearchSuggestions";
 import BannerCarousel from "../components/banners/BannerCarousel";
+import GuestLocationSelector from "../components/common/GuestLocationSelector";
+import { useGuestLocation } from "../hooks/useGuestLocation";
 
 function HomePage() {
   const { approvedEvents } = useAppData();
   const { user } = useAuth();
   const [query, setQuery] = useState("");
-  const featured = useMemo(() => approvedEvents.slice(0, 3), [approvedEvents]);
   const suggestions = useSearchSuggestions(approvedEvents, query);
   const publishTarget = user ? "/criar-evento" : "/login";
+  const {
+    effectiveState,
+    effectiveCity,
+    saveGuestLocation,
+  } = useGuestLocation();
+  const localizedEvents = useMemo(() => {
+    if (!effectiveState || !effectiveCity) return approvedEvents;
+
+    const normalizedState = String(effectiveState).trim().toLowerCase();
+    const normalizedCity = String(effectiveCity).trim().toLowerCase();
+    const cityEvents = approvedEvents.filter(
+      (event) =>
+        String(event.state || "").trim().toLowerCase() === normalizedState &&
+        String(event.city || "").trim().toLowerCase() === normalizedCity
+    );
+    if (cityEvents.length > 0) return cityEvents;
+
+    const stateEvents = approvedEvents.filter(
+      (event) => String(event.state || "").trim().toLowerCase() === normalizedState
+    );
+    if (stateEvents.length > 0) return stateEvents;
+
+    return approvedEvents;
+  }, [approvedEvents, effectiveCity, effectiveState]);
+  const featured = useMemo(() => localizedEvents.slice(0, 3), [localizedEvents]);
+  const featuredTitle =
+    effectiveState && effectiveCity
+      ? `Eventos em destaque em ${effectiveCity} - ${effectiveState}`
+      : "Eventos em destaque";
 
   return (
     <div className="space-y-8">
-      <BannerCarousel position="home-top" />
+      <GuestLocationSelector
+        stateValue={effectiveState}
+        cityValue={effectiveCity}
+        onSaveLocation={saveGuestLocation}
+      />
+      <BannerCarousel position="home-top" currentState={effectiveState} currentCity={effectiveCity} />
 
-      <section className="grid gap-6 rounded-2xl border bg-white p-6 shadow-soft md:grid-cols-2">
+      <section className="grid gap-6 rounded-2xl border bg-white p-4 shadow-soft sm:p-6 md:grid-cols-2">
         <div className="space-y-4">
           <p className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
             Plataforma moderna de encontros automotivos
@@ -32,12 +67,12 @@ function HomePage() {
             Estrutura escalável para organizadores, visitantes e parceiros com
             descoberta inteligente e dashboard administrativo.
           </p>
-          <div className="flex gap-3">
-            <Link to="/eventos">
-              <Button size="lg">Explorar eventos</Button>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Link to="/eventos" className="w-full sm:w-auto">
+              <Button size="lg" className="w-full sm:w-auto">Explorar eventos</Button>
             </Link>
-            <Link to={publishTarget}>
-              <Button size="lg" variant="outline">
+            <Link to={publishTarget} className="w-full sm:w-auto">
+              <Button size="lg" variant="outline" className="w-full sm:w-auto">
                 Publicar evento
               </Button>
             </Link>
@@ -55,11 +90,11 @@ function HomePage() {
         />
       </section>
 
-      <BannerCarousel position="home-middle" />
+      <BannerCarousel position="home-middle" currentState={effectiveState} currentCity={effectiveCity} />
 
       <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-semibold">Eventos em destaque</h2>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-2xl font-semibold">{featuredTitle}</h2>
           <Link to="/eventos" className="text-sm font-medium text-primary">
             Ver todos
           </Link>
@@ -67,10 +102,10 @@ function HomePage() {
         <EventList events={featured} />
       </section>
 
-      <BannerCarousel position="home-bottom" />
+      <BannerCarousel position="home-bottom" currentState={effectiveState} currentCity={effectiveCity} />
 
       <section className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-2xl font-semibold">Patrocinadores e parceiros</h2>
           <Link to="/patrocinadores" className="text-sm font-medium text-primary">
             Ver todos

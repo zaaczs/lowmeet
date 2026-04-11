@@ -1,23 +1,56 @@
-import { Handshake } from "lucide-react";
+import { Handshake, Lock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import GuestLocationSelector from "../components/common/GuestLocationSelector";
 import { useAppData } from "../context/AppDataContext";
+import { useGuestLocation } from "../hooks/useGuestLocation";
 
 const whatsappLink =
   "https://wa.me/5585997732508?text=Opaa%21%20Quero%20me%20tornar%20um%20patrocinador%20Oficial%20do%20Sistema%20LowMeet";
+const citySponsorWhatsappLink =
+  "https://wa.me/5585997732508?text=Ol%C3%A1%2C%20quero%20reservar%20o%20banner%20da%20minha%20cidade%20no%20LowMeet.";
+
+function normalizeTextKey(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
 
 function SponsorsPage() {
   const { banners } = useAppData();
+  const {
+    effectiveState,
+    effectiveCity,
+    saveGuestLocation,
+  } = useGuestLocation();
+  const activeBanners = banners.filter((banner) => banner.active);
+  const resolvedState = String(effectiveState || "").trim().toUpperCase();
+  const resolvedCity = String(effectiveCity || "").trim();
+  const hasCityTargeting = Boolean(resolvedState && resolvedCity);
+  const stateKey = normalizeTextKey(resolvedState);
+  const cityKey = normalizeTextKey(resolvedCity);
+  const hasCitySponsor = activeBanners.some(
+    (banner) =>
+      (banner.targetingLevel || "NATIONAL") === "CITY" &&
+      normalizeTextKey(banner.state) === stateKey &&
+      normalizeTextKey(banner.city) === cityKey
+  );
+  const shouldShowCityPlaceholder = hasCityTargeting && !hasCitySponsor;
 
   const sponsors = Array.from(
     new Map(
-      banners
-        .filter((banner) => banner.active)
-        .map((banner) => [banner.brandName, banner])
+      activeBanners.map((banner) => [banner.brandName, banner])
     ).values()
   );
 
   return (
     <div className="space-y-6">
+      <GuestLocationSelector
+        stateValue={effectiveState}
+        cityValue={effectiveCity}
+        onSaveLocation={saveGuestLocation}
+      />
       <div className="flex items-center gap-2">
         <Handshake size={24} className="text-primary" />
         <h1 className="text-3xl font-bold">Patrocinadores e parceiros</h1>
@@ -30,32 +63,75 @@ function SponsorsPage() {
       </p>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {sponsors.map((sponsor) => (
-          <Card key={sponsor.id} className="overflow-hidden">
-            <img
-              src={sponsor.image}
-              alt={`Patrocinador ${sponsor.brandName}`}
-              className="h-44 w-full object-cover"
-            />
-            <CardHeader className="space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                {sponsor.type}
-              </p>
-              <CardTitle>{sponsor.brandName}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-sm text-muted-foreground">{sponsor.story}</p>
-              <a
-                href={sponsor.link}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex text-sm font-medium text-primary hover:underline"
-              >
-                Conhecer parceiro
-              </a>
-            </CardContent>
-          </Card>
-        ))}
+        {sponsors.map((sponsor) => {
+          const sponsorCard = (
+            <Card
+              key={sponsor.id}
+              className={`relative overflow-hidden transition-all duration-300 ${
+                shouldShowCityPlaceholder ? "group-hover:-translate-y-0.5 group-hover:shadow-xl" : ""
+              }`}
+            >
+              <img
+                src={sponsor.image}
+                alt={`Patrocinador ${sponsor.brandName}`}
+                className={`h-44 w-full object-cover transition-transform duration-500 ${
+                  shouldShowCityPlaceholder ? "opacity-30 blur-[1.5px] group-hover:scale-105" : ""
+                }`}
+              />
+              <CardHeader className={`space-y-1 ${shouldShowCityPlaceholder ? "opacity-45" : ""}`}>
+                <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+                  {sponsor.type}
+                </p>
+                <CardTitle>{sponsor.brandName}</CardTitle>
+              </CardHeader>
+              <CardContent className={`space-y-3 ${shouldShowCityPlaceholder ? "opacity-45" : ""}`}>
+                <p className="text-sm text-muted-foreground">{sponsor.story}</p>
+                {shouldShowCityPlaceholder ? (
+                  <span className="inline-flex text-sm font-medium text-primary/70">
+                    Conhecer parceiro
+                  </span>
+                ) : (
+                  <a
+                    href={sponsor.link}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex text-sm font-medium text-primary hover:underline"
+                  >
+                    Conhecer parceiro
+                  </a>
+                )}
+              </CardContent>
+              {shouldShowCityPlaceholder && (
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/65 px-4 text-center text-white transition-colors duration-300 group-hover:bg-black/55">
+                  <Lock
+                    size={18}
+                    aria-hidden="true"
+                    className="mb-1.5 transition-transform duration-300 group-hover:scale-110"
+                  />
+                  <p className="text-xs font-semibold leading-tight transition-colors duration-300 group-hover:text-white md:text-sm">
+                    Banner disponível para patrocinador em {resolvedCity} - {resolvedState}
+                  </p>
+                  <p className="mt-1 text-[11px] leading-tight opacity-95 transition-colors duration-300 group-hover:text-white md:text-xs">
+                    Clique para ser um patrocinador e reservar este espaço.
+                  </p>
+                </div>
+              )}
+            </Card>
+          );
+
+          if (!shouldShowCityPlaceholder) return sponsorCard;
+          return (
+            <a
+              key={`locked-${sponsor.id}`}
+              href={citySponsorWhatsappLink}
+              target="_blank"
+              rel="noreferrer"
+              className="group block"
+            >
+              {sponsorCard}
+            </a>
+          );
+        })}
       </section>
 
       <div className="flex flex-wrap items-center justify-center gap-3 border-t pt-4">

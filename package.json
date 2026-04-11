@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host localhost --port 5173 --strictPort",
     "dev:webhook": "node webhook/send-2fa-server.js",
     "dev:full": "concurrently \"npm:dev:webhook\" \"npm:dev\"",
     "build": "vite build",

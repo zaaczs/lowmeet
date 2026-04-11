@@ -29,6 +29,7 @@ import {
 import { useAppData } from "../context/AppDataContext";
 import { useAuth } from "../context/AuthContext";
 import { processImageUpload } from "../lib/imageProcessing";
+import { useBrazilLocations } from "../hooks/useBrazilLocations";
 
 const BANNER_TARGET_WIDTH = 1280;
 const BANNER_TARGET_HEIGHT = 854;
@@ -254,6 +255,11 @@ const BANNER_POSITION_LABELS = {
   "events-after-calendar": "Eventos - Abaixo do calendário",
   "events-bottom": "Eventos - Final da página",
 };
+const BANNER_TARGETING_LABELS = {
+  NATIONAL: "Nacional",
+  STATE: "Por estado",
+  CITY: "Por cidade",
+};
 
 const BANNER_VISIBILITY_PLAN = {
   "home-top": {
@@ -294,6 +300,48 @@ const getBannerVisibilityInfo = (position) =>
     planName: "Plano não mapeado",
     visibility: position || "posição não informada",
   };
+
+const getPageNumbers = (currentPage, totalPages, maxVisible = 7) => {
+  if (totalPages <= maxVisible) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  const half = Math.floor(maxVisible / 2);
+  const start = Math.max(1, Math.min(currentPage - half, totalPages - maxVisible + 1));
+  return Array.from({ length: maxVisible }, (_, index) => start + index);
+};
+
+const normalizeLocationKey = (value) => String(value || "").trim().toLowerCase();
+
+const buildLocationOptions = (records, selectedState) => {
+  const stateSet = new Set();
+  const citySet = new Set();
+  const selectedStateKey = normalizeLocationKey(selectedState);
+
+  records.forEach((entry) => {
+    const state = String(entry?.state || "").trim().toUpperCase();
+    const city = String(entry?.city || "").trim();
+    if (state) stateSet.add(state);
+    if (city && (!selectedStateKey || normalizeLocationKey(state) === selectedStateKey)) {
+      citySet.add(city);
+    }
+  });
+
+  return {
+    states: Array.from(stateSet).sort((a, b) => a.localeCompare(b, "pt-BR")),
+    cities: Array.from(citySet).sort((a, b) => a.localeCompare(b, "pt-BR")),
+  };
+};
+
+const matchesStateCityFilter = (entry, filters) => {
+  const targetState = normalizeLocationKey(filters?.state);
+  const targetCity = normalizeLocationKey(filters?.city);
+  const entryState = normalizeLocationKey(entry?.state);
+  const entryCity = normalizeLocationKey(entry?.city);
+  if (targetState && entryState !== targetState) return false;
+  if (targetCity && entryCity !== targetCity) return false;
+  return true;
+};
 
 function BannerImageEditor({ editor, setEditor, helperText }) {
   const previewRef = useRef(null);
@@ -600,6 +648,9 @@ function AdminDashboardPage() {
     image: "",
     link: "",
     position: "home-top",
+    targetingLevel: "NATIONAL",
+    state: "",
+    city: "",
     focusY: 50,
   });
   const [bannerEditError, setBannerEditError] = useState("");
@@ -615,9 +666,27 @@ function AdminDashboardPage() {
   const [userActionError, setUserActionError] = useState("");
   const [userSearchTerm, setUserSearchTerm] = useState("");
   const [usersPage, setUsersPage] = useState(1);
+  const [pendingSearchTerm, setPendingSearchTerm] = useState("");
+  const [pendingPage, setPendingPage] = useState(1);
+  const [eventsManagementPage, setEventsManagementPage] = useState(1);
   const [selectedPendingEventId, setSelectedPendingEventId] = useState(null);
   const [activeModule, setActiveModule] = useState("dashboard");
+  const [moduleLocationFilters, setModuleLocationFilters] = useState({
+    users: { state: "", city: "" },
+    approval: { state: "", city: "" },
+    sponsors: { state: "", city: "" },
+    "events-management": { state: "", city: "" },
+  });
+  const {
+    stateOptions: bannerStateOptions,
+    cityOptions: bannerCityOptions,
+    loadingStates: loadingBannerStates,
+    loadingCities: loadingBannerCities,
+  } = useBrazilLocations(bannerEditForm.state);
+
   const USERS_PAGE_SIZE = 10;
+  const PENDING_EVENTS_PAGE_SIZE = 10;
+  const EVENTS_MANAGEMENT_PAGE_SIZE = 10;
 
   const createEditorFromSource = async (source, initialFocusY = 50) => {
     const dimensions = await loadImageDimensions(source);
@@ -806,27 +875,103 @@ function AdminDashboardPage() {
       return true;
     });
   }, [users]);
+  const usersLocationFilter = moduleLocationFilters.users;
+  const approvalLocationFilter = moduleLocationFilters.approval;
+  const sponsorsLocationFilter = moduleLocationFilters.sponsors;
+  const eventsManagementLocationFilter = moduleLocationFilters["events-management"];
+  const usersLocationOptions = useMemo(
+    () =>
+      buildLocationOptions(
+        uniqueUsers.map((account) => ({ state: account.state, city: account.city })),
+        usersLocationFilter.state
+      ),
+    [uniqueUsers, usersLocationFilter.state]
+  );
   const filteredUsers = useMemo(() => {
     const query = userSearchTerm.trim().toLowerCase();
-    if (!query) return uniqueUsers;
+    const usersBySearch = !query
+      ? uniqueUsers
+      : uniqueUsers.filter((account) => {
+          const nameMatch = account.name?.toLowerCase().includes(query);
+          const emailMatch = account.email?.toLowerCase().includes(query);
+          return nameMatch || emailMatch;
+        });
 
-    const emailExactMatch = uniqueUsers.find(
-      (account) => String(account.email || "").trim().toLowerCase() === query
+    return usersBySearch.filter((account) =>
+      matchesStateCityFilter(
+        { state: account.state, city: account.city },
+        usersLocationFilter
+      )
     );
-    if (emailExactMatch) return [emailExactMatch];
-
-    const nameExactMatch = uniqueUsers.find(
-      (account) => String(account.name || "").trim().toLowerCase() === query
-    );
-    if (nameExactMatch) return [nameExactMatch];
-
-    return uniqueUsers.filter((account) => {
-      const nameMatch = account.name?.toLowerCase().includes(query);
-      const emailMatch = account.email?.toLowerCase().includes(query);
-      return nameMatch || emailMatch;
-    });
-  }, [uniqueUsers, userSearchTerm]);
+  }, [uniqueUsers, userSearchTerm, usersLocationFilter]);
   const totalUsersPages = Math.max(1, Math.ceil(filteredUsers.length / USERS_PAGE_SIZE));
+  const pendingLocationOptions = useMemo(
+    () =>
+      buildLocationOptions(
+        pendingEvents.map((event) => ({ state: event.state, city: event.city })),
+        approvalLocationFilter.state
+      ),
+    [approvalLocationFilter.state, pendingEvents]
+  );
+  const filteredPendingEvents = useMemo(() => {
+    const query = pendingSearchTerm.trim().toLowerCase();
+    const pendingBySearch = !query
+      ? pendingEvents
+      : pendingEvents.filter((event) => {
+          return [event.name, event.city, event.type, event.organizerName, event.state]
+            .filter(Boolean)
+            .some((value) => String(value).toLowerCase().includes(query));
+        });
+
+    return pendingBySearch.filter((event) =>
+      matchesStateCityFilter({ state: event.state, city: event.city }, approvalLocationFilter)
+    );
+  }, [approvalLocationFilter, pendingEvents, pendingSearchTerm]);
+  const sponsorsLocationOptions = useMemo(
+    () =>
+      buildLocationOptions(
+        banners.map((banner) => ({ state: banner.state, city: banner.city })),
+        sponsorsLocationFilter.state
+      ),
+    [banners, sponsorsLocationFilter.state]
+  );
+  const filteredBanners = useMemo(
+    () =>
+      banners.filter((banner) =>
+        matchesStateCityFilter({ state: banner.state, city: banner.city }, sponsorsLocationFilter)
+      ),
+    [banners, sponsorsLocationFilter]
+  );
+  const filteredBannerPerformance = useMemo(() => {
+    const allowedIds = new Set(filteredBanners.map((banner) => banner.id));
+    return bannerPerformance.filter((banner) => allowedIds.has(banner.id));
+  }, [bannerPerformance, filteredBanners]);
+  const eventsManagementLocationOptions = useMemo(
+    () =>
+      buildLocationOptions(
+        events.map((event) => ({ state: event.state, city: event.city })),
+        eventsManagementLocationFilter.state
+      ),
+    [events, eventsManagementLocationFilter.state]
+  );
+  const filteredManagementEvents = useMemo(
+    () =>
+      events.filter((event) =>
+        matchesStateCityFilter(
+          { state: event.state, city: event.city },
+          eventsManagementLocationFilter
+        )
+      ),
+    [events, eventsManagementLocationFilter]
+  );
+  const totalPendingPages = Math.max(
+    1,
+    Math.ceil(filteredPendingEvents.length / PENDING_EVENTS_PAGE_SIZE)
+  );
+  const totalEventsManagementPages = Math.max(
+    1,
+    Math.ceil(filteredManagementEvents.length / EVENTS_MANAGEMENT_PAGE_SIZE)
+  );
   const selectedPendingEvent = useMemo(
     () => pendingEvents.find((event) => event.id === selectedPendingEventId) ?? null,
     [pendingEvents, selectedPendingEventId]
@@ -835,6 +980,26 @@ function AdminDashboardPage() {
     const start = (usersPage - 1) * USERS_PAGE_SIZE;
     return filteredUsers.slice(start, start + USERS_PAGE_SIZE);
   }, [filteredUsers, usersPage]);
+  const paginatedPendingEvents = useMemo(() => {
+    const start = (pendingPage - 1) * PENDING_EVENTS_PAGE_SIZE;
+    return filteredPendingEvents.slice(start, start + PENDING_EVENTS_PAGE_SIZE);
+  }, [filteredPendingEvents, pendingPage]);
+  const paginatedManagementEvents = useMemo(() => {
+    const start = (eventsManagementPage - 1) * EVENTS_MANAGEMENT_PAGE_SIZE;
+    return filteredManagementEvents.slice(start, start + EVENTS_MANAGEMENT_PAGE_SIZE);
+  }, [eventsManagementPage, filteredManagementEvents]);
+  const usersPageNumbers = useMemo(
+    () => getPageNumbers(usersPage, totalUsersPages),
+    [usersPage, totalUsersPages]
+  );
+  const pendingPageNumbers = useMemo(
+    () => getPageNumbers(pendingPage, totalPendingPages),
+    [pendingPage, totalPendingPages]
+  );
+  const eventsManagementPageNumbers = useMemo(
+    () => getPageNumbers(eventsManagementPage, totalEventsManagementPages),
+    [eventsManagementPage, totalEventsManagementPages]
+  );
 
   useEffect(() => {
     setUsersPage(1);
@@ -845,11 +1010,33 @@ function AdminDashboardPage() {
   }, [totalUsersPages]);
 
   useEffect(() => {
+    setPendingPage(1);
+  }, [pendingSearchTerm]);
+
+  useEffect(() => {
+    setPendingPage((previous) => Math.min(previous, totalPendingPages));
+  }, [totalPendingPages]);
+
+  useEffect(() => {
+    setEventsManagementPage((previous) => Math.min(previous, totalEventsManagementPages));
+  }, [totalEventsManagementPages]);
+
+  useEffect(() => {
     const stillExists = pendingEvents.some((event) => event.id === selectedPendingEventId);
     if (!stillExists) {
       setSelectedPendingEventId(null);
     }
   }, [pendingEvents, selectedPendingEventId]);
+
+  useEffect(() => {
+    if (!selectedPendingEventId) return;
+    const isVisibleInCurrentFilter = filteredPendingEvents.some(
+      (event) => event.id === selectedPendingEventId
+    );
+    if (!isVisibleInCurrentFilter) {
+      setSelectedPendingEventId(null);
+    }
+  }, [filteredPendingEvents, selectedPendingEventId]);
   const activeModuleData = useMemo(
     () => ADMIN_MODULES.find((module) => module.key === activeModule) ?? ADMIN_MODULES[0],
     [activeModule]
@@ -860,6 +1047,27 @@ function AdminDashboardPage() {
     const nextIndex =
       (safeIndex + direction + ADMIN_MODULES.length) % ADMIN_MODULES.length;
     setActiveModule(ADMIN_MODULES[nextIndex].key);
+  };
+  const updateModuleLocationFilter = (moduleKey, field, value) => {
+    setModuleLocationFilters((prev) => {
+      const current = prev[moduleKey] ?? { state: "", city: "" };
+      if (field === "state") {
+        return {
+          ...prev,
+          [moduleKey]: { ...current, state: value, city: "" },
+        };
+      }
+      return {
+        ...prev,
+        [moduleKey]: { ...current, [field]: value },
+      };
+    });
+  };
+  const clearModuleLocationFilter = (moduleKey) => {
+    setModuleLocationFilters((prev) => ({
+      ...prev,
+      [moduleKey]: { state: "", city: "" },
+    }));
   };
 
   const startEventEdit = (event) => {
@@ -887,6 +1095,9 @@ function AdminDashboardPage() {
       image: banner.image,
       link: banner.link,
       position: banner.position,
+      targetingLevel: banner.targetingLevel || "NATIONAL",
+      state: banner.state || "",
+      city: banner.city || "",
       focusY: Number(banner.focusY ?? 50),
     });
     setBannerEditError("");
@@ -912,14 +1123,18 @@ function AdminDashboardPage() {
       }
     }
 
-    updateBanner(editingBannerId, {
-      ...bannerEditForm,
-      image,
-      focusY: Number(bannerEditImageEditor?.focusY ?? bannerEditForm.focusY ?? 50),
-    });
-    setEditingBannerId(null);
-    setBannerEditImageEditor(null);
-    setBannerEditImageInfo(null);
+    try {
+      updateBanner(editingBannerId, {
+        ...bannerEditForm,
+        image,
+        focusY: Number(bannerEditImageEditor?.focusY ?? bannerEditForm.focusY ?? 50),
+      });
+      setEditingBannerId(null);
+      setBannerEditImageEditor(null);
+      setBannerEditImageInfo(null);
+    } catch (error) {
+      setBannerEditError(error.message || "Não foi possível salvar o banner.");
+    }
   };
 
   const startUserEdit = (account) => {
@@ -1166,6 +1381,42 @@ function AdminDashboardPage() {
                     onChange={(event) => setUserSearchTerm(event.target.value)}
                     placeholder="Buscar por nome ou e-mail"
                   />
+                  <div className="grid gap-2 md:grid-cols-3">
+                    <Select
+                      value={usersLocationFilter.state}
+                      onChange={(event) =>
+                        updateModuleLocationFilter("users", "state", event.target.value)
+                      }
+                    >
+                      <option value="">Todos os estados</option>
+                      {usersLocationOptions.states.map((state) => (
+                        <option key={state} value={state}>
+                          {state}
+                        </option>
+                      ))}
+                    </Select>
+                    <Select
+                      value={usersLocationFilter.city}
+                      onChange={(event) =>
+                        updateModuleLocationFilter("users", "city", event.target.value)
+                      }
+                      disabled={!usersLocationFilter.state}
+                    >
+                      <option value="">Todas as cidades</option>
+                      {usersLocationOptions.cities.map((city) => (
+                        <option key={city} value={city}>
+                          {city}
+                        </option>
+                      ))}
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => clearModuleLocationFilter("users")}
+                    >
+                      Limpar filtro de local
+                    </Button>
+                  </div>
                   <p className="text-xs text-muted-foreground">
                     Mostrando {paginatedUsers.length} de {filteredUsers.length} usuário(s) filtrados.
                   </p>
@@ -1277,29 +1528,19 @@ function AdminDashboardPage() {
                   </p>
                 )}
                 {filteredUsers.length > USERS_PAGE_SIZE && (
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
-                    <p className="text-xs text-muted-foreground">
-                      Página {usersPage} de {totalUsersPages}
-                    </p>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setUsersPage((previous) => Math.max(1, previous - 1))}
-                        disabled={usersPage === 1}
-                      >
-                        Anterior
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          setUsersPage((previous) => Math.min(totalUsersPages, previous + 1))
-                        }
-                        disabled={usersPage === totalUsersPages}
-                      >
-                        Próxima
-                      </Button>
+                  <div className="flex justify-center pt-2">
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {usersPageNumbers.map((pageNumber) => (
+                        <Button
+                          key={`users-page-${pageNumber}`}
+                          size="sm"
+                          variant={usersPage === pageNumber ? "default" : "outline"}
+                          onClick={() => setUsersPage(pageNumber)}
+                          aria-label={`Ir para página ${pageNumber}`}
+                        >
+                          {pageNumber}
+                        </Button>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -1313,10 +1554,62 @@ function AdminDashboardPage() {
                 <CardTitle>Aprovar ou reprovar eventos</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
+                <div className="space-y-2">
+                  <Input
+                    value={pendingSearchTerm}
+                    onChange={(event) => setPendingSearchTerm(event.target.value)}
+                    placeholder="Buscar evento por nome, cidade, tipo, estado ou organizador"
+                  />
+                  <div className="grid gap-2 md:grid-cols-3">
+                    <Select
+                      value={approvalLocationFilter.state}
+                      onChange={(event) =>
+                        updateModuleLocationFilter("approval", "state", event.target.value)
+                      }
+                    >
+                      <option value="">Todos os estados</option>
+                      {pendingLocationOptions.states.map((state) => (
+                        <option key={state} value={state}>
+                          {state}
+                        </option>
+                      ))}
+                    </Select>
+                    <Select
+                      value={approvalLocationFilter.city}
+                      onChange={(event) =>
+                        updateModuleLocationFilter("approval", "city", event.target.value)
+                      }
+                      disabled={!approvalLocationFilter.state}
+                    >
+                      <option value="">Todas as cidades</option>
+                      {pendingLocationOptions.cities.map((city) => (
+                        <option key={city} value={city}>
+                          {city}
+                        </option>
+                      ))}
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => clearModuleLocationFilter("approval")}
+                    >
+                      Limpar filtro de local
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Mostrando {paginatedPendingEvents.length} de {filteredPendingEvents.length} evento(s)
+                    pendentes.
+                  </p>
+                </div>
                 {pendingEvents.length === 0 && (
                   <p className="text-sm text-muted-foreground">Sem eventos pendentes.</p>
                 )}
-                {pendingEvents.map((event) => (
+                {pendingEvents.length > 0 && filteredPendingEvents.length === 0 && (
+                  <p className="rounded-lg border p-3 text-sm text-muted-foreground">
+                    Nenhum evento pendente encontrado para esta busca.
+                  </p>
+                )}
+                {paginatedPendingEvents.map((event) => (
                   <div
                     key={event.id}
                     className={`flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 ${
@@ -1351,7 +1644,24 @@ function AdminDashboardPage() {
                     </div>
                   </div>
                 ))}
-                {pendingEvents.length > 0 && !selectedPendingEvent && (
+                {filteredPendingEvents.length > PENDING_EVENTS_PAGE_SIZE && (
+                  <div className="flex justify-center pt-2">
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {pendingPageNumbers.map((pageNumber) => (
+                        <Button
+                          key={`pending-page-${pageNumber}`}
+                          size="sm"
+                          variant={pendingPage === pageNumber ? "default" : "outline"}
+                          onClick={() => setPendingPage(pageNumber)}
+                          aria-label={`Ir para página ${pageNumber}`}
+                        >
+                          {pageNumber}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {filteredPendingEvents.length > 0 && !selectedPendingEvent && (
                   <p className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
                     Clique no ícone de olho para visualizar os dados completos antes de aprovar.
                   </p>
@@ -1422,7 +1732,43 @@ function AdminDashboardPage() {
                   <CardTitle>Gestão de parcerias</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  {banners.map((banner) => (
+                  <div className="grid gap-2 md:grid-cols-3">
+                    <Select
+                      value={sponsorsLocationFilter.state}
+                      onChange={(event) =>
+                        updateModuleLocationFilter("sponsors", "state", event.target.value)
+                      }
+                    >
+                      <option value="">Todos os estados</option>
+                      {sponsorsLocationOptions.states.map((state) => (
+                        <option key={state} value={state}>
+                          {state}
+                        </option>
+                      ))}
+                    </Select>
+                    <Select
+                      value={sponsorsLocationFilter.city}
+                      onChange={(event) =>
+                        updateModuleLocationFilter("sponsors", "city", event.target.value)
+                      }
+                      disabled={!sponsorsLocationFilter.state}
+                    >
+                      <option value="">Todas as cidades</option>
+                      {sponsorsLocationOptions.cities.map((city) => (
+                        <option key={city} value={city}>
+                          {city}
+                        </option>
+                      ))}
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => clearModuleLocationFilter("sponsors")}
+                    >
+                      Limpar filtro de local
+                    </Button>
+                  </div>
+                  {filteredBanners.map((banner) => (
                     <div key={banner.id} className="rounded-lg border p-3 text-sm">
                       {editingBannerId === banner.id ? (
                         <div className="grid gap-2 md:grid-cols-2">
@@ -1487,6 +1833,69 @@ function AdminDashboardPage() {
                             <option value="events-bottom">Eventos - Final da página</option>
                           </Select>
                           <Select
+                            value={bannerEditForm.targetingLevel}
+                            onChange={(event) =>
+                              setBannerEditForm((prev) => ({
+                                ...prev,
+                                targetingLevel: event.target.value,
+                                state: event.target.value === "NATIONAL" ? "" : prev.state,
+                                city: event.target.value === "CITY" ? prev.city : "",
+                              }))
+                            }
+                          >
+                            <option value="NATIONAL">Nacional</option>
+                            <option value="STATE">Por estado</option>
+                            <option value="CITY">Por cidade</option>
+                          </Select>
+                          <Select
+                            value={bannerEditForm.state}
+                            onChange={(event) =>
+                              setBannerEditForm((prev) => ({
+                                ...prev,
+                                state: event.target.value,
+                                city: "",
+                              }))
+                            }
+                            disabled={bannerEditForm.targetingLevel === "NATIONAL"}
+                          >
+                            <option value="">
+                              {loadingBannerStates ? "Carregando estados..." : "Selecione o estado"}
+                            </option>
+                            {bannerStateOptions.map((state) => (
+                              <option key={state.value} value={state.value}>
+                                {state.label}
+                              </option>
+                            ))}
+                          </Select>
+                          <Select
+                            value={bannerEditForm.city}
+                            onChange={(event) =>
+                              setBannerEditForm((prev) => ({
+                                ...prev,
+                                city: event.target.value,
+                              }))
+                            }
+                            disabled={bannerEditForm.targetingLevel !== "CITY" || !bannerEditForm.state}
+                          >
+                            <option value="">
+                              {bannerEditForm.targetingLevel !== "CITY"
+                                ? "Disponível apenas para segmentação por cidade"
+                                : !bannerEditForm.state
+                                  ? "Selecione o estado primeiro"
+                                  : loadingBannerCities
+                                    ? "Carregando cidades..."
+                                    : "Selecione a cidade"}
+                            </option>
+                            {bannerCityOptions.map((city) => (
+                              <option key={city} value={city}>
+                                {city}
+                              </option>
+                            ))}
+                          </Select>
+                          <p className="text-xs text-muted-foreground md:col-span-2">
+                            Regra atual: apenas 1 patrocinador ativo por cidade.
+                          </p>
+                          <Input
                             value={bannerEditForm.type}
                             onChange={(event) =>
                               setBannerEditForm((prev) => ({
@@ -1494,11 +1903,8 @@ function AdminDashboardPage() {
                                 type: event.target.value,
                               }))
                             }
-                          >
-                            <option value="oficina">Oficina</option>
-                            <option value="loja">Loja</option>
-                            <option value="patrocinador">Patrocinador</option>
-                          </Select>
+                            placeholder="Segmento (ex: Estética automotiva)"
+                          />
                           <div className="flex gap-2">
                             <Button size="sm" onClick={saveBannerEdit}>
                               Salvar
@@ -1539,6 +1945,11 @@ function AdminDashboardPage() {
                             <p className="text-muted-foreground">
                               Segmento: {banner.type}
                             </p>
+                            <p className="text-muted-foreground">
+                              Segmentação: {BANNER_TARGETING_LABELS[banner.targetingLevel || "NATIONAL"]}{" "}
+                              {banner.state ? `- ${banner.state}` : ""}
+                              {banner.city ? ` / ${banner.city}` : ""}
+                            </p>
                           </div>
                           <div className="flex gap-2">
                             <Button size="sm" variant="outline" onClick={() => startBannerEdit(banner)}>
@@ -1556,6 +1967,11 @@ function AdminDashboardPage() {
                       )}
                     </div>
                   ))}
+                  {filteredBanners.length === 0 && (
+                    <p className="rounded-lg border p-3 text-sm text-muted-foreground">
+                      Nenhum patrocinador encontrado para este filtro.
+                    </p>
+                  )}
                 </CardContent>
               </Card>
 
@@ -1564,7 +1980,7 @@ function AdminDashboardPage() {
                   <CardTitle>Performance de patrocinadores (cliques)</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
-                  {bannerPerformance.map((banner) => (
+                  {filteredBannerPerformance.map((banner) => (
                     <div
                       key={banner.id}
                       className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"
@@ -1587,6 +2003,11 @@ function AdminDashboardPage() {
                       </div>
                     </div>
                   ))}
+                  {filteredBannerPerformance.length === 0 && (
+                    <p className="rounded-lg border p-3 text-sm text-muted-foreground">
+                      Sem dados de performance para os filtros atuais.
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             </>
@@ -1598,7 +2019,43 @@ function AdminDashboardPage() {
                 <CardTitle>Gestão geral de eventos e calendário</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                {events.map((event) => (
+                <div className="grid gap-2 md:grid-cols-3">
+                  <Select
+                    value={eventsManagementLocationFilter.state}
+                    onChange={(event) =>
+                      updateModuleLocationFilter("events-management", "state", event.target.value)
+                    }
+                  >
+                    <option value="">Todos os estados</option>
+                    {eventsManagementLocationOptions.states.map((state) => (
+                      <option key={state} value={state}>
+                        {state}
+                      </option>
+                    ))}
+                  </Select>
+                  <Select
+                    value={eventsManagementLocationFilter.city}
+                    onChange={(event) =>
+                      updateModuleLocationFilter("events-management", "city", event.target.value)
+                    }
+                    disabled={!eventsManagementLocationFilter.state}
+                  >
+                    <option value="">Todas as cidades</option>
+                    {eventsManagementLocationOptions.cities.map((city) => (
+                      <option key={city} value={city}>
+                        {city}
+                      </option>
+                    ))}
+                  </Select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => clearModuleLocationFilter("events-management")}
+                  >
+                    Limpar filtro de local
+                  </Button>
+                </div>
+                {paginatedManagementEvents.map((event) => (
                   <div
                     key={event.id}
                     className="rounded-lg border p-3 text-sm"
@@ -1680,6 +2137,28 @@ function AdminDashboardPage() {
                     )}
                   </div>
                 ))}
+                {filteredManagementEvents.length === 0 && (
+                  <p className="rounded-lg border p-3 text-sm text-muted-foreground">
+                    Nenhum evento encontrado para este filtro.
+                  </p>
+                )}
+                {filteredManagementEvents.length > EVENTS_MANAGEMENT_PAGE_SIZE && (
+                  <div className="flex justify-center pt-2">
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {eventsManagementPageNumbers.map((pageNumber) => (
+                        <Button
+                          key={`events-management-page-${pageNumber}`}
+                          size="sm"
+                          variant={eventsManagementPage === pageNumber ? "default" : "outline"}
+                          onClick={() => setEventsManagementPage(pageNumber)}
+                          aria-label={`Ir para página ${pageNumber}`}
+                        >
+                          {pageNumber}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}

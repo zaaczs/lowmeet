@@ -3,9 +3,11 @@ import { useSearchParams } from "react-router-dom";
 import { BadgeCheck, CalendarCheck2, Heart, UserRound } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
+import { Select } from "../components/ui/select";
 import { Button } from "../components/ui/button";
 import { useAuth } from "../context/AuthContext";
 import { useAppData } from "../context/AppDataContext";
+import { useBrazilLocations } from "../hooks/useBrazilLocations";
 
 function ProfilePage() {
   const { user, updateProfile } = useAuth();
@@ -15,12 +17,14 @@ function ProfilePage() {
   const [error, setError] = useState("");
   const [form, setForm] = useState({
     name: "",
+    state: "",
     city: "",
     instagram: "",
     bio: "",
     password: "",
     confirmPassword: "",
   });
+  const { stateOptions, cityOptions, loadingStates, loadingCities } = useBrazilLocations(form.state);
 
   const isEditing = searchParams.get("tab") === "editar";
   const createdEvents = useMemo(
@@ -33,6 +37,7 @@ function ProfilePage() {
     setForm((prev) => ({
       ...prev,
       name: user.name || "",
+      state: user.state || "",
       city: user.city || "",
       instagram: user.instagram || "",
       bio: user.bio || "",
@@ -56,6 +61,7 @@ function ProfilePage() {
     try {
       updateProfile({
         name: form.name,
+        state: form.state,
         city: form.city,
         instagram: form.instagram,
         bio: form.bio,
@@ -73,7 +79,7 @@ function ProfilePage() {
     <div className="space-y-6">
       <div className="flex items-center gap-2">
         <UserRound size={24} className="text-primary" />
-        <h1 className="text-3xl font-bold">Meu perfil</h1>
+        <h1 className="text-2xl font-bold sm:text-3xl">Meu perfil</h1>
       </div>
 
       <section className="grid gap-4 md:grid-cols-3">
@@ -113,6 +119,9 @@ function ProfilePage() {
               <span className="font-semibold">E-mail:</span> {user?.email}
             </p>
             <p>
+              <span className="font-semibold">Estado:</span> {user?.state || "Não informado"}
+            </p>
+            <p>
               <span className="font-semibold">Cidade:</span> {user?.city || "Não informado"}
             </p>
             <p>
@@ -148,11 +157,40 @@ function ProfilePage() {
                 required
               />
               <Input value={user?.email || ""} disabled />
-              <Input
-                placeholder="Cidade"
+              <Select
+                value={form.state}
+                onChange={(event) => {
+                  const nextState = event.target.value;
+                  setForm((prev) => ({ ...prev, state: nextState, city: "" }));
+                }}
+              >
+                <option value="">
+                  {loadingStates ? "Carregando estados..." : "Selecione o estado"}
+                </option>
+                {stateOptions.map((state) => (
+                  <option key={state.value} value={state.value}>
+                    {state.label}
+                  </option>
+                ))}
+              </Select>
+              <Select
                 value={form.city}
                 onChange={(event) => setField("city", event.target.value)}
-              />
+                disabled={!form.state || loadingCities}
+              >
+                <option value="">
+                  {!form.state
+                    ? "Selecione o estado primeiro"
+                    : loadingCities
+                      ? "Carregando cidades..."
+                      : "Selecione a cidade"}
+                </option>
+                {cityOptions.map((city) => (
+                  <option key={city} value={city}>
+                    {city}
+                  </option>
+                ))}
+              </Select>
               <Input
                 placeholder="Instagram (ex: @lowmeet)"
                 value={form.instagram}
@@ -178,9 +216,14 @@ function ProfilePage() {
               />
               {error && <p className="md:col-span-2 text-sm text-red-600">{error}</p>}
               {message && <p className="md:col-span-2 text-sm text-green-600">{message}</p>}
-              <div className="md:col-span-2 flex gap-2">
-                <Button type="submit">Salvar alterações</Button>
-                <Button type="button" variant="ghost" onClick={() => setSearchParams({})}>
+              <div className="md:col-span-2 flex flex-wrap gap-2">
+                <Button type="submit" className="w-full sm:w-auto">Salvar alterações</Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full sm:w-auto"
+                  onClick={() => setSearchParams({})}
+                >
                   Cancelar
                 </Button>
               </div>

@@ -22,6 +22,33 @@ export const mockUsers = [
   },
 ];
 
+const mockPendingApprovalStressEvents = Array.from({ length: 12 }, (_, index) => {
+  const eventNumber = index + 1;
+  const isPaid = eventNumber % 2 === 0;
+  return {
+    id: `ev-pending-test-${eventNumber}`,
+    name: `Evento Pendente Teste ${eventNumber}`,
+    type: eventNumber % 3 === 0 ? "Exposição" : "Encontro",
+    description: `Evento pendente de teste ${eventNumber} para validar busca e paginação no painel admin.`,
+    datetime: `2026-06-${String((eventNumber % 28) + 1).padStart(2, "0")}T19:00:00`,
+    city: eventNumber % 2 === 0 ? "Curitiba" : "Sao Paulo",
+    state: eventNumber % 2 === 0 ? "PR" : "SP",
+    street: `Av. Teste ${eventNumber}`,
+    number: `${100 + eventNumber}`,
+    complement: "",
+    location: `Av. Teste ${eventNumber}, ${100 + eventNumber}`,
+    ticketType: isPaid ? "paid" : "free",
+    ticketPrice: isPaid ? 25 + eventNumber : null,
+    image:
+      "https://images.unsplash.com/photo-1514316454349-750a7fd3da3a?auto=format&fit=crop&w=1200&q=80",
+    organizerId: "u-org-1",
+    organizerName: "Garage Norte",
+    tags: ["teste", "pending", "admin"],
+    status: "pending",
+    createdAt: `2026-04-${String((eventNumber % 28) + 1).padStart(2, "0")}T10:00:00`,
+  };
+});
+
 export const mockPendingApprovalEvents = [
   {
     id: "ev-3",
@@ -114,7 +141,41 @@ export const mockPendingApprovalEvents = [
     status: "pending",
     createdAt: "2026-03-30T21:20:00",
   },
+  ...mockPendingApprovalStressEvents,
 ];
+
+const additionalStressTestEvents = Array.from({ length: 15 }, (_, index) => {
+  const eventNumber = index + 6;
+  const isPaid = eventNumber % 2 === 0;
+  const city = eventNumber % 3 === 0 ? "Fortaleza" : eventNumber % 3 === 1 ? "Curitiba" : "Sao Paulo";
+  const state = city === "Fortaleza" ? "CE" : city === "Curitiba" ? "PR" : "SP";
+  const day = String((eventNumber % 28) + 1).padStart(2, "0");
+  const hour = String((eventNumber % 12) + 9).padStart(2, "0");
+  const eventType = eventNumber % 4 === 0 ? "Track Day" : eventNumber % 4 === 1 ? "Encontro" : eventNumber % 4 === 2 ? "Exposição" : "Arrancada";
+
+  return {
+    id: `ev-test-${eventNumber}`,
+    name: `Evento Teste ${eventNumber}`,
+    type: eventType,
+    description: `Evento de teste ${eventNumber} para validar busca por nome, paginação e limite de exibição.`,
+    datetime: `2026-04-${day}T${hour}:00:00`,
+    city,
+    state,
+    street: `Avenida Teste ${eventNumber}`,
+    number: `${100 + eventNumber}`,
+    complement: "",
+    location: `Avenida Teste ${eventNumber}, ${100 + eventNumber}`,
+    ticketType: isPaid ? "paid" : "free",
+    ticketPrice: isPaid ? 20 + eventNumber : null,
+    image:
+      "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1200&q=80",
+    organizerId: "u-org-1",
+    organizerName: "Garage Norte",
+    tags: ["teste", "paginacao", "busca"],
+    status: "approved",
+    createdAt: `2026-03-${String((eventNumber % 28) + 1).padStart(2, "0")}T10:00:00`,
+  };
+});
 
 export const mockEvents = [
   {
@@ -275,6 +336,7 @@ export const mockStressTestEvents = [
     status: "approved",
     createdAt: "2026-03-29T08:00:00",
   },
+  ...additionalStressTestEvents,
 ];
 
 export const mockBanners = [
@@ -283,9 +345,12 @@ export const mockBanners = [
     brandName: "TurboMax Performance",
     type: "oficina",
     image:
-      "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1487754180451-c456f719a1fc?auto=format&fit=crop&w=1200&q=80",
     link: "https://instagram.com",
     position: "home-top",
+    targetingLevel: "NATIONAL",
+    state: "",
+    city: "",
     active: true,
     story:
       "A TurboMax nasceu da paixão por preparação turbo e acerto fino para projetos de rua e pista. Hoje é referência em performance confiável.",
@@ -295,59 +360,74 @@ export const mockBanners = [
     brandName: "DT Garage Store",
     type: "loja",
     image:
-      "https://images.unsplash.com/photo-1542362567-b07e54358753?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=1200&q=80",
     link: "https://wa.me/5511999999999",
     position: "home-middle",
+    targetingLevel: "NATIONAL",
+    state: "",
+    city: "",
     active: true,
     story:
       "A DT Garage Store começou como uma pequena loja de acessórios e virou ponto de encontro de quem busca peças, estilo e suporte para projetos custom.",
   },
   {
     id: "bn-3",
-    brandName: "Garage Performance",
-    type: "patrocinador",
+    brandName: "Morbus Estética",
+    type: "estética automotiva",
     image:
-      "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1607860108855-64acf2078ed9?auto=format&fit=crop&w=1200&q=80",
     link: "https://example.com",
     position: "home-bottom",
+    targetingLevel: "NATIONAL",
+    state: "",
+    city: "",
     active: true,
     story:
-      "A Garage Performance atua no ecossistema automotivo apoiando eventos e iniciativas da comunidade, conectando marcas e apaixonados por carros.",
+      "A Morbus Estética atua no ecossistema automotivo apoiando eventos e iniciativas da comunidade, conectando marcas e apaixonados por carros.",
   },
   {
     id: "bn-4",
-    brandName: "Octane Motors",
-    type: "oficina",
+    brandName: "Américo Pneus",
+    type: "loja de pneus",
     image:
-      "https://images.unsplash.com/photo-1533106418989-88406c7cc8ca?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1607861716497-e65ab29fc7ac?auto=format&fit=crop&w=1200&q=80",
     link: "https://instagram.com",
     position: "events-top",
+    targetingLevel: "NATIONAL",
+    state: "",
+    city: "",
     active: true,
     story:
-      "A Octane Motors é focada em manutenção especializada e upgrades para veículos esportivos, com histórico forte em track days e encontros técnicos.",
+      "A Américo Pneus é focada em manutenção especializada e upgrades para veículos esportivos, com histórico forte em track days e encontros técnicos.",
   },
   {
     id: "bn-5",
     brandName: "Street Customs",
-    type: "loja",
+    type: "customização de carros",
     image:
-      "https://images.unsplash.com/photo-1517142089942-ba376ce32a2e?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1616455579100-2ceaa4eb2d37?auto=format&fit=crop&w=1200&q=80",
     link: "https://example.com",
     position: "events-bottom",
+    targetingLevel: "NATIONAL",
+    state: "",
+    city: "",
     active: true,
     story:
       "A Street Customs construiu sua história transformando carros comuns em projetos únicos, valorizando acabamento premium e identidade visual.",
   },
   {
     id: "bn-6",
-    brandName: "Nitro Wheels Club",
-    type: "patrocinador",
+    brandName: "West Sons",
+    type: "som automotivo",
     image:
-      "https://images.unsplash.com/photo-1617469767053-d3b523a0b982?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&w=1200&q=80",
     link: "https://instagram.com",
     position: "events-after-calendar",
+    targetingLevel: "NATIONAL",
+    state: "",
+    city: "",
     active: true,
     story:
-      "A Nitro Wheels Club promove ativações com marcas e encontros temáticos, trazendo experiências para o público logo após o calendário de eventos.",
+      "A West Sons promove ativações com marcas e encontros temáticos, trazendo experiências para o público logo após o calendário de eventos.",
   },
 ];

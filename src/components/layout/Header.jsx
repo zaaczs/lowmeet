@@ -1,4 +1,4 @@
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import {
   Bell,
@@ -6,9 +6,11 @@ import {
   Heart,
   LayoutDashboard,
   LogOut,
+  Menu,
   PencilLine,
   PlusCircle,
   UserRound,
+  X,
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { ROLES, useAuth } from "../../context/AuthContext";
@@ -21,6 +23,7 @@ const navClass = ({ isActive }) =>
   }`;
 
 function Header() {
+  const location = useLocation();
   const { user, logout } = useAuth();
   const {
     notifications,
@@ -30,8 +33,17 @@ function Header() {
   } = useAppData();
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const notificationsRef = useRef(null);
+
+  const navItems = [
+    { to: "/", label: "Home", protected: false },
+    { to: "/eventos", label: "Eventos", protected: false },
+    { to: "/patrocinadores", label: "Patrocinadores", protected: false },
+    { to: "/favoritos", label: "Favoritos", protected: true },
+    { to: "/criar-evento", label: "Criar evento", protected: true },
+  ];
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -46,51 +58,44 @@ function Header() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    setMobileMenuOpen(false);
+    setProfileMenuOpen(false);
+    setNotificationMenuOpen(false);
+  }, [location.pathname]);
+
   return (
     <header className="sticky top-0 z-40 border-b bg-white/95 backdrop-blur">
-      <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-6">
+      <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-3 py-3 md:px-6">
         <Link to="/" className="flex items-center gap-2">
-          <span className="flex h-20 w-30 items-center justify-center">
-            <img src={loweredCarLogo} alt="Logo carro rebaixado" className="h-9 w-13 object-contain" />
+          <span className="flex h-10 items-center justify-center">
+            <img
+              src={loweredCarLogo}
+              alt="Logo carro rebaixado"
+              className="h-8 w-auto max-w-none object-contain sm:h-9"
+            />
           </span>
-          <div>
-            <p className="text-lg font-semibold">LowMeet</p>
+          <div className="hidden sm:block">
+            <p className="text-base font-semibold md:text-lg">LowMeet</p>
             <p className="text-xs text-muted-foreground">Eventos automotivos</p>
           </div>
         </Link>
 
         <nav className="hidden items-center gap-6 md:flex">
-          <NavLink to="/" className={navClass}>
-            Home
-          </NavLink>
-          <NavLink to="/eventos" className={navClass}>
-            Eventos
-          </NavLink>
-          <NavLink to="/patrocinadores" className={navClass}>
-            Patrocinadores
-          </NavLink>
-          {user && (
-            <NavLink to="/favoritos" className={navClass}>
-              Favoritos
-            </NavLink>
-          )}
-          {user && (
-            <NavLink to="/criar-evento" className={navClass}>
-              Criar evento
-            </NavLink>
-          )}
-          {user?.role === ROLES.ADMIN && (
-            <NavLink to="/admin" className={navClass}>
-              Admin
-            </NavLink>
-          )}
+          {navItems
+            .filter((item) => !item.protected || user)
+            .map((item) => (
+              <NavLink key={item.to} to={item.to} className={navClass}>
+                {item.label}
+              </NavLink>
+            ))}
         </nav>
 
         <div className="flex items-center gap-2">
           {user ? (
             <>
               {user.role === ROLES.ADMIN && (
-                <Link to="/admin">
+                <Link to="/admin" className="hidden md:inline-flex">
                   <Button size="sm" variant="secondary" className="gap-2">
                     <LayoutDashboard size={14} />
                     Painel
@@ -98,14 +103,19 @@ function Header() {
                 </Link>
               )}
               {user && (
-                <Link to="/criar-evento">
+                <Link to="/criar-evento" className="hidden md:inline-flex">
                   <Button size="sm" className="gap-2">
                     <PlusCircle size={14} />
                     Novo
                   </Button>
                 </Link>
               )}
-              <Link to="/favoritos">
+              <Link to="/favoritos" className="hidden sm:inline-flex md:hidden">
+                <Button size="sm" variant="outline">
+                  <Heart size={14} />
+                </Button>
+              </Link>
+              <Link to="/favoritos" className="hidden md:inline-flex">
                 <Button size="sm" variant="outline" className="gap-2">
                   <Heart size={14} />
                   Favoritos
@@ -122,6 +132,7 @@ function Header() {
                   }}
                 >
                   <Bell size={15} />
+                  <span className="sr-only">Notificações</span>
                   {unreadNotificationsCount > 0 && (
                     <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-red-500 px-1 text-center text-[10px] font-semibold text-white">
                       {unreadNotificationsCount > 9 ? "9+" : unreadNotificationsCount}
@@ -129,7 +140,7 @@ function Header() {
                   )}
                 </Button>
                 {notificationMenuOpen && (
-                  <div className="absolute right-0 top-11 z-50 w-80 rounded-xl border bg-white p-2 shadow-soft">
+                  <div className="absolute right-0 top-11 z-50 w-[min(20rem,calc(100vw-1rem))] rounded-xl border bg-white p-2 shadow-soft">
                     <div className="mb-2 flex items-center justify-between">
                       <p className="text-sm font-semibold">Notificações</p>
                       {unreadNotificationsCount > 0 && (
@@ -173,14 +184,14 @@ function Header() {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="gap-2"
+                  className="gap-2 md:pr-3"
                   onClick={() => {
                     setProfileMenuOpen((prev) => !prev);
                     setNotificationMenuOpen(false);
                   }}
                 >
                   <CircleUserRound size={16} />
-                  Perfil
+                  <span className="hidden md:inline">Perfil</span>
                 </Button>
                 {profileMenuOpen && (
                   <div className="absolute right-0 top-11 z-50 w-48 rounded-xl border bg-white p-1 shadow-soft">
@@ -217,11 +228,55 @@ function Header() {
             </>
           ) : (
             <Link to="/login">
-              <Button size="sm">Entrar</Button>
+              <Button size="sm" className="hidden sm:inline-flex">
+                Entrar
+              </Button>
             </Link>
           )}
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="md:hidden"
+            onClick={() => {
+              setMobileMenuOpen((prev) => !prev);
+              setProfileMenuOpen(false);
+              setNotificationMenuOpen(false);
+            }}
+          >
+            {mobileMenuOpen ? <X size={16} /> : <Menu size={16} />}
+            <span className="sr-only">Menu</span>
+          </Button>
         </div>
       </div>
+      {mobileMenuOpen && (
+        <div className="border-t bg-white md:hidden">
+          <nav className="mx-auto flex w-full max-w-7xl flex-col gap-1 px-3 py-3">
+            {navItems
+              .filter((item) => !item.protected || user)
+              .map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={({ isActive }) =>
+                    `rounded-md px-3 py-2 text-sm font-medium ${
+                      isActive ? "bg-primary/10 text-primary" : "text-slate-700 hover:bg-muted"
+                    }`
+                  }
+                >
+                  {item.label}
+                </NavLink>
+              ))}
+            {!user && (
+              <Link to="/login" className="pt-2">
+                <Button size="sm" className="w-full">
+                  Entrar
+                </Button>
+              </Link>
+            )}
+          </nav>
+        </div>
+      )}
     </header>
   );
 }

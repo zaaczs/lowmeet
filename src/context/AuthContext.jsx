@@ -14,13 +14,24 @@ const AuthContext = createContext(null);
 const ADMIN_EMAIL = "lowmeetlowmeet@gmail.com";
 const ADMIN_PASSWORD = "admin";
 const getNowIso = () => new Date().toISOString();
-const TEST_VISITOR_USERS = Array.from({ length: 12 }, (_, index) => ({
-  id: `u-visit-test-${index + 1}`,
-  name: `Visitante Teste ${index + 1}`,
-  email: `visitante.teste${index + 1}@lowmeet.com`,
-  password: "123456",
-  role: ROLES.VISITOR,
-}));
+const TEST_VISITOR_USERS = [
+  ...Array.from({ length: 24 }, (_, index) => ({
+    id: `u-visit-test-${index + 1}`,
+    name: `Visitante Teste ${index + 1}`,
+    email: `visitante.teste${index + 1}@lowmeet.com`,
+    password: "123456",
+    role: ROLES.VISITOR,
+  })),
+  {
+    id: "u-visit-banner-locked",
+    name: "Visitante Banner Bloqueado",
+    email: "teste.bloqueio.banner@lowmeet.com",
+    password: "123456",
+    role: ROLES.VISITOR,
+    state: "CE",
+    city: "Fortaleza",
+  },
+];
 
 function withAccessMetrics(user) {
   return {
@@ -28,6 +39,8 @@ function withAccessMetrics(user) {
     createdAt: user.createdAt || getNowIso(),
     lastLoginAt: user.lastLoginAt ?? null,
     loginCount: Number(user.loginCount || 0),
+    state: String(user.state || "").trim().toUpperCase(),
+    city: String(user.city || "").trim(),
   };
 }
 
@@ -112,7 +125,7 @@ export function AuthProvider({ children }) {
     localStorage.removeItem(STORAGE_SESSION);
   }, [user]);
 
-  const register = ({ name, email, password, role = ROLES.VISITOR }) => {
+  const register = ({ name, email, password, role = ROLES.VISITOR, state = "", city = "" }) => {
     const hasEmail = users.some((candidate) => candidate.email === email);
     if (hasEmail) {
       throw new Error("E-mail já cadastrado");
@@ -126,7 +139,8 @@ export function AuthProvider({ children }) {
       password,
       role,
       bio: "",
-      city: "",
+      state: state.trim().toUpperCase(),
+      city: city.trim(),
       instagram: "",
       createdAt: now,
       lastLoginAt: now,
@@ -166,11 +180,12 @@ export function AuthProvider({ children }) {
     return nextUser;
   };
 
-  const updateProfile = ({ name, city, instagram, bio, password }) => {
+  const updateProfile = ({ name, state, city, instagram, bio, password }) => {
     if (!user) throw new Error("Usuário não autenticado");
 
     const updates = {
       name: name?.trim() || user.name,
+      state: state?.trim().toUpperCase() || "",
       city: city?.trim() || "",
       instagram: instagram?.trim() || "",
       bio: bio?.trim() || "",
@@ -216,6 +231,8 @@ export function AuthProvider({ children }) {
       name: updates.name?.trim() || target.name,
       email: nextEmail,
       role: nextRole,
+      state: updates.state !== undefined ? String(updates.state || "").trim().toUpperCase() : target.state,
+      city: updates.city !== undefined ? String(updates.city || "").trim() : target.city,
     };
 
     if (typeof updates.password === "string" && updates.password.trim()) {

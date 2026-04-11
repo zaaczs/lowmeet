@@ -2,6 +2,7 @@ import emailjs from "@emailjs/browser";
 
 const STORAGE_2FA_CODES = "lowmeet_2fa_codes";
 const CODE_TTL_MS = 10 * 60 * 1000;
+const WEBHOOK_TIMEOUT_MS = 12000;
 
 function getCodesStore() {
   const raw = localStorage.getItem(STORAGE_2FA_CODES);
@@ -29,12 +30,16 @@ export async function sendTwoFactorCode(email) {
   const emailJsPublicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
 
   if (webhookUrl) {
+    let timeoutId;
     try {
+      const abortController = new AbortController();
+      timeoutId = setTimeout(() => abortController.abort(), WEBHOOK_TIMEOUT_MS);
       const response = await fetch(webhookUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
+        signal: abortController.signal,
         body: JSON.stringify({
           email,
           subject: "Código de verificação - LowMeet",
@@ -58,12 +63,19 @@ export async function sendTwoFactorCode(email) {
         );
       }
     } catch (error) {
+      if (error.name === "AbortError") {
+        throw new Error(
+          "Tempo esgotado ao enviar o código. Verifique se o webhook 2FA está ativo (`npm run dev:full`)."
+        );
+      }
       if (error.message?.includes("Failed to fetch")) {
         throw new Error(
           "Webhook offline. Rode `npm run dev:full` ou mantenha `npm run dev:webhook` ativo."
         );
       }
       throw error;
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
     }
 
     return { mode: "webhook" };

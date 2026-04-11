@@ -3,7 +3,7 @@ import profileImage from "../../../501190974_17958817823946559_52050024540533936
 function Footer() {
   return (
     <footer className="border-t bg-white">
-      <div className="flex w-full flex-col gap-4 px-4 py-6 text-sm text-muted-foreground md:flex-row md:items-center md:gap-8 md:px-8">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-3 py-6 text-sm text-muted-foreground sm:px-4 md:flex-row md:items-center md:gap-8 md:px-6">
         <div className="space-y-4 md:max-w-5xl">
           <p className="font-medium text-slate-700">
             LowMeet - Plataforma de eventos automotivos.
@@ -17,6 +17,10 @@ function Footer() {
             encontros, oficinas e amizades da cena automotiva, nasceu a vontade de criar
             o LowMeet para conectar a comunidade, facilitar a divulgação de eventos e dar
             mais visibilidade para parceiros do meio.
+          </p>
+          <p className="max-w-4xl text-xs">
+            Privacidade: usamos sua cidade e estado apenas para personalizar banners e
+            patrocinadores locais. Você pode alterar essa localização quando quiser.
           </p>
         </div>
         <a

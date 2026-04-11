@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import EventFilters from "../components/events/EventFilters";
 import EventList from "../components/events/EventList";
@@ -7,6 +7,7 @@ import BannerCarousel from "../components/banners/BannerCarousel";
 import { Button } from "../components/ui/button";
 import { useAppData } from "../context/AppDataContext";
 import { useBrazilLocations } from "../hooks/useBrazilLocations";
+import { useGuestLocation } from "../hooks/useGuestLocation";
 
 const DEFAULT_EVENT_TYPES = ["Encontro", "Track Day", "Exposição", "Arrancada"];
 
@@ -32,6 +33,8 @@ function EventsPage() {
     day: "",
   });
   const [seedFeedback, setSeedFeedback] = useState("");
+  const { effectiveState, effectiveCity } = useGuestLocation();
+  const [hasAppliedInitialLocation, setHasAppliedInitialLocation] = useState(false);
 
   const { stateOptions, cityOptions, loadingStates, loadingCities } = useBrazilLocations(
     draftFilters.state
@@ -86,12 +89,21 @@ function EventsPage() {
     setTimeout(() => setSeedFeedback(""), 2000);
   };
 
+  useEffect(() => {
+    if (hasAppliedInitialLocation) return;
+    if (!effectiveState || !effectiveCity) return;
+
+    setDraftFilters((prev) => ({ ...prev, state: effectiveState, city: effectiveCity }));
+    setFilters((prev) => ({ ...prev, state: effectiveState, city: effectiveCity }));
+    setHasAppliedInitialLocation(true);
+  }, [effectiveCity, effectiveState, hasAppliedInitialLocation]);
+
   return (
     <div className="space-y-6">
-      <BannerCarousel position="events-top" />
+      <BannerCarousel position="events-top" currentState={effectiveState} currentCity={effectiveCity} />
       <div className="space-y-6">
         <section className="space-y-3">
-          <h1 className="text-3xl font-bold">Eventos e calendário</h1>
+          <h1 className="text-2xl font-bold sm:text-3xl">Eventos e calendário</h1>
           <EventFilters
             filters={draftFilters}
             onChange={handleFilterChange}
@@ -102,7 +114,7 @@ function EventsPage() {
             loadingStates={loadingStates}
             loadingCities={loadingCities}
           />
-          <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end">
             {seedFeedback && <p className="text-xs text-emerald-600">{seedFeedback}</p>}
             <Button variant="outline" onClick={handleSeedTestEvents}>
               Inserir eventos de teste
@@ -116,11 +128,15 @@ function EventsPage() {
           selectedMonth={calendarSelectedMonth}
           onPickEvent={(event) => navigate(`/eventos/${event.id}`)}
         />
-        <BannerCarousel position="events-after-calendar" />
+        <BannerCarousel
+          position="events-after-calendar"
+          currentState={effectiveState}
+          currentCity={effectiveCity}
+        />
 
-        <EventList events={filtered} />
+        <EventList events={filtered} itemsPerPage={12} showNameSearch />
       </div>
-      <BannerCarousel position="events-bottom" />
+      <BannerCarousel position="events-bottom" currentState={effectiveState} currentCity={effectiveCity} />
     </div>
   );
 }

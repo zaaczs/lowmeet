@@ -54,84 +54,88 @@ function EventCalendar({ events, onPickEvent, selectedMonth = "" }) {
   return (
     <Card>
       <CardHeader className="border-b bg-gradient-to-r from-primary/5 via-white to-primary/5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <CardTitle>Calendário de eventos - {monthLabel}</CardTitle>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <CardTitle className="text-lg sm:text-xl">Calendário de eventos - {monthLabel}</CardTitle>
           <span className="rounded-full border bg-white px-3 py-1 text-xs font-medium text-slate-600">
             {totalInMonth} evento(s) no mês
           </span>
         </div>
       </CardHeader>
       <CardContent className="space-y-3 pt-4">
-        <div className="grid grid-cols-7 gap-2 text-center text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-          {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"].map((day) => (
-            <div key={day}>{day}</div>
-          ))}
-        </div>
-        <div className="space-y-2">
-          {matrix.map((week, index) => (
-            <div key={index} className="grid grid-cols-7 gap-2">
-              {week.map((day, cellIndex) => {
-                const items = day ? monthEvents[day] ?? [] : [];
-                const isExpanded = Boolean(expandedDays[day]);
-                const visibleItems = isExpanded ? items : items.slice(0, 2);
-                const hiddenCount = items.length - visibleItems.length;
-                return (
-                  <div
-                    key={`${index}-${cellIndex}`}
-                    className={`min-h-24 rounded-xl border p-2 transition-colors ${
-                      day ? "bg-white hover:border-primary/40" : "bg-slate-50/60"
-                    }`}
-                  >
-                    {day && (
-                      <div className="mb-1 flex items-center justify-between">
-                        <p className="text-xs font-semibold">{day}</p>
-                        {items.length > 0 && (
-                          <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-                            {items.length}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    <div className="space-y-1">
-                      {visibleItems.map((event) => (
-                        <button
-                          key={event.id}
-                          type="button"
-                          title={`${event.name} - ${event.city}`}
-                          className="w-full truncate rounded-md border border-primary/20 bg-primary/10 px-1.5 py-1 text-left text-[10px] font-medium text-primary"
-                          onClick={() => onPickEvent?.(event)}
-                        >
-                          {new Date(event.datetime).toLocaleTimeString("pt-BR", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}{" "}
-                          - {event.name}
-                        </button>
-                      ))}
-                      {hiddenCount > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => toggleDayExpanded(day)}
-                          className="w-full rounded-md border border-dashed border-slate-300 px-1.5 py-1 text-left text-[10px] font-medium text-slate-600 hover:border-primary/40 hover:text-primary"
-                        >
-                          Ver mais {hiddenCount} evento(s)
-                        </button>
-                      )}
-                      {items.length > 2 && isExpanded && (
-                        <button
-                          type="button"
-                          onClick={() => toggleDayExpanded(day)}
-                          className="w-full rounded-md px-1.5 py-1 text-left text-[10px] font-medium text-slate-500 hover:text-primary"
-                        >
-                          Ver menos
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+        <div className="-mx-2 overflow-x-auto px-2 pb-1">
+          <div className="min-w-[42rem] space-y-2">
+            <div className="grid grid-cols-7 gap-2 text-center text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"].map((day) => (
+                <div key={day}>{day}</div>
+              ))}
             </div>
-          ))}
+            <div className="space-y-2">
+              {matrix.map((week, index) => (
+                <div key={index} className="grid grid-cols-7 gap-2">
+                  {week.map((day, cellIndex) => {
+                    const items = day ? monthEvents[day] ?? [] : [];
+                    const isExpanded = Boolean(expandedDays[day]);
+                    const visibleItems = isExpanded ? items : items.slice(0, 2);
+                    const hiddenCount = items.length - visibleItems.length;
+                    return (
+                      <div
+                        key={`${index}-${cellIndex}`}
+                        className={`min-h-24 rounded-xl border p-2 transition-colors ${
+                          day ? "bg-white hover:border-primary/40" : "bg-slate-50/60"
+                        }`}
+                      >
+                        {day && (
+                          <div className="mb-1 flex items-center justify-between">
+                            <p className="text-xs font-semibold">{day}</p>
+                            {items.length > 0 && (
+                              <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                                {items.length}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        <div className="space-y-1">
+                          {visibleItems.map((event) => (
+                            <button
+                              key={event.id}
+                              type="button"
+                              title={`${event.name} - ${event.city}`}
+                              className="w-full truncate rounded-md border border-primary/20 bg-primary/10 px-1.5 py-1 text-left text-[10px] font-medium text-primary"
+                              onClick={() => onPickEvent?.(event)}
+                            >
+                              {new Date(event.datetime).toLocaleTimeString("pt-BR", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}{" "}
+                              - {event.name}
+                            </button>
+                          ))}
+                          {hiddenCount > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => toggleDayExpanded(day)}
+                              className="w-full rounded-md border border-dashed border-slate-300 px-1.5 py-1 text-left text-[10px] font-medium text-slate-600 hover:border-primary/40 hover:text-primary"
+                            >
+                              Ver mais {hiddenCount} evento(s)
+                            </button>
+                          )}
+                          {items.length > 2 && isExpanded && (
+                            <button
+                              type="button"
+                              onClick={() => toggleDayExpanded(day)}
+                              className="w-full rounded-md px-1.5 py-1 text-left text-[10px] font-medium text-slate-500 hover:text-primary"
+                            >
+                              Ver menos
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>

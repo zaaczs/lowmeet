@@ -105,7 +105,7 @@ function CreateEventPage() {
   };
 
   return (
-    <Card className="max-w-3xl">
+    <Card className="w-full max-w-3xl">
       <CardHeader>
         <CardTitle>Criar novo evento</CardTitle>
       </CardHeader>
@@ -343,7 +343,7 @@ function CreateEventPage() {
             onChange={(event) => setField("description", event.target.value)}
             required
           />
-          <div className="md:col-span-2 flex items-center gap-3">
+          <div className="md:col-span-2 flex flex-wrap items-center gap-3">
             <Button type="submit">Salvar evento</Button>
             {message && <p className="text-sm text-muted-foreground">{message}</p>}
           </div>

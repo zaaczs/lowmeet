@@ -32,7 +32,7 @@ function EventDetailsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="h-72 w-full overflow-hidden rounded-2xl md:h-96">
+      <div className="h-56 w-full overflow-hidden rounded-2xl sm:h-72 md:h-96">
         <img
           src={event.image}
           alt={event.name}
@@ -51,7 +51,7 @@ function EventDetailsPage() {
           </Badge>
         ))}
       </div>
-      <h1 className="text-3xl font-bold">{event.name}</h1>
+      <h1 className="text-2xl font-bold sm:text-3xl">{event.name}</h1>
       <p className="max-w-3xl text-muted-foreground">{event.description}</p>
 
       <Card>

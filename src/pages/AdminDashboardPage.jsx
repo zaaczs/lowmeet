@@ -1874,7 +1874,7 @@ function AdminDashboardPage() {
                             ))}
                           </Select>
                           <p className="text-xs text-muted-foreground md:col-span-2">
-                            Regra atual: apenas 1 patrocinador ativo por cidade.
+                            Regra atual: múltiplos patrocinadores podem ficar ativos na mesma cidade.
                           </p>
                           <Input
                             value={bannerEditForm.type}

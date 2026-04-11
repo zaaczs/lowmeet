@@ -21,14 +21,6 @@ function normalizeDate(dateString) {
   return dateString?.split("T")[0] ?? "";
 }
 
-function normalizeTextKey(value) {
-  return String(value || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim();
-}
-
 function normalizeBannerTargeting(rawBanner) {
   const normalizedLevel = BANNER_TARGETING_LEVELS.CITY;
   const normalizedState = String(rawBanner?.state || "").trim().toUpperCase();
@@ -75,26 +67,11 @@ function appendMissingDefaultBanners(sourceBanners) {
 }
 
 export function AppDataProvider({ children }) {
-  const validateBannerCoverage = (nextBanner, targetBannerId = null) => {
+  const validateBannerCoverage = (nextBanner) => {
     if (!nextBanner?.active) return;
     if (!nextBanner.position) return;
     if (!nextBanner.state || !nextBanner.city) {
       throw new Error("Selecione estado e cidade para cadastrar o banner.");
-    }
-
-    const targetStateKey = normalizeTextKey(nextBanner.state);
-    const targetCityKey = normalizeTextKey(nextBanner.city);
-    const hasConflict = banners.some((banner) => {
-      if (!banner.active) return false;
-      if (banner.id === targetBannerId) return false;
-      return (
-        normalizeTextKey(banner.state) === targetStateKey &&
-        normalizeTextKey(banner.city) === targetCityKey
-      );
-    });
-
-    if (hasConflict) {
-      throw new Error("Já existe um patrocinador ativo nesta cidade.");
     }
   };
 
@@ -267,7 +244,7 @@ export function AppDataProvider({ children }) {
     const currentBanner = banners.find((banner) => banner.id === bannerId);
     if (!currentBanner) return;
     const nextBanner = normalizeBannerTargeting({ ...currentBanner, ...updates });
-    validateBannerCoverage(nextBanner, bannerId);
+    validateBannerCoverage(nextBanner);
     setBanners((prev) =>
       prev.map((banner) => (banner.id === bannerId ? nextBanner : banner))
     );

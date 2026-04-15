@@ -80,28 +80,32 @@ function CreateEventPage() {
       return;
     }
 
-    const created = createEvent({
-      ...form,
-      location: getLocationLabel(),
-      ticketPrice: parsedPrice,
-      cardImageScale: Number(form.cardImageScale) || 1,
-      cardImageOffsetY: Number(form.cardImageOffsetY) || 0,
-      heroImageScale: Number(form.heroImageScale) || 1,
-      heroImageOffsetY: Number(form.heroImageOffsetY) || 0,
-      tags: form.tags
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter(Boolean),
-      image:
-        form.image ||
-        "https://images.unsplash.com/photo-1485291571150-772bcfc10da5?auto=format&fit=crop&w=1200&q=80",
-    });
-    setMessage(
-      created.status === "approved"
-        ? "Evento publicado com sucesso."
-        : "Evento criado e enviado para aprovação do admin."
-    );
-    setTimeout(() => navigate("/eventos"), 1200);
+    try {
+      const created = createEvent({
+        ...form,
+        location: getLocationLabel(),
+        ticketPrice: parsedPrice,
+        cardImageScale: Number(form.cardImageScale) || 1,
+        cardImageOffsetY: Number(form.cardImageOffsetY) || 0,
+        heroImageScale: Number(form.heroImageScale) || 1,
+        heroImageOffsetY: Number(form.heroImageOffsetY) || 0,
+        tags: form.tags
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter(Boolean),
+        image:
+          form.image ||
+          "https://images.unsplash.com/photo-1485291571150-772bcfc10da5?auto=format&fit=crop&w=1200&q=80",
+      });
+      setMessage(
+        created.status === "approved"
+          ? "Evento publicado com sucesso."
+          : "Evento criado e enviado para aprovação do admin."
+      );
+      setTimeout(() => navigate("/eventos"), 1200);
+    } catch (error) {
+      setMessage(error.message || "Não foi possível criar o evento.");
+    }
   };
 
   return (

@@ -3,11 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import GuestLocationSelector from "../components/common/GuestLocationSelector";
 import { useAppData } from "../context/AppDataContext";
 import { useGuestLocation } from "../hooks/useGuestLocation";
-
-const whatsappLink =
-  "https://wa.me/5585997732508?text=Opaa%21%20Quero%20me%20tornar%20um%20patrocinador%20Oficial%20do%20Sistema%20LowMeet";
-const citySponsorWhatsappLink =
-  "https://wa.me/5585997732508?text=Ol%C3%A1%2C%20quero%20reservar%20o%20banner%20da%20minha%20cidade%20no%20LowMeet.";
+import {
+  WHATSAPP_PATROCINADOR_OFICIAL,
+  WHATSAPP_RESERVA_BANNER_CIDADE,
+  WHATSAPP_SEM_LOCALIZACAO,
+} from "../constants/sponsorContactLinks";
+import { SPONSOR_RESERVE_CTA } from "../constants/sponsorCopy";
+import { getPartnerShowcaseGridBanners } from "../services/mockData";
 
 function normalizeTextKey(value) {
   return String(value || "")
@@ -19,11 +21,7 @@ function normalizeTextKey(value) {
 
 function SponsorsPage() {
   const { banners } = useAppData();
-  const {
-    effectiveState,
-    effectiveCity,
-    saveGuestLocation,
-  } = useGuestLocation();
+  const { effectiveState, effectiveCity, saveGuestLocation } = useGuestLocation();
   const activeBanners = banners.filter((banner) => banner.active);
   const resolvedState = String(effectiveState || "").trim().toUpperCase();
   const resolvedCity = String(effectiveCity || "").trim();
@@ -32,21 +30,26 @@ function SponsorsPage() {
   const cityKey = normalizeTextKey(resolvedCity);
   const citySponsors = activeBanners.filter(
     (banner) =>
-      normalizeTextKey(banner.state) === stateKey &&
-      normalizeTextKey(banner.city) === cityKey
+      normalizeTextKey(banner.state) === stateKey && normalizeTextKey(banner.city) === cityKey
   );
   const hasCitySponsor = citySponsors.length > 0;
   const shouldShowCityPlaceholder = hasCityTargeting && !hasCitySponsor;
+  const isLocationPreviewLock = !hasCityTargeting;
 
   const allSponsors = Array.from(
-    new Map(
-      activeBanners.map((banner) => [banner.brandName, banner])
-    ).values()
+    new Map(activeBanners.map((banner) => [banner.brandName, banner])).values()
   );
   const citySponsorsUnique = Array.from(
     new Map(citySponsors.map((banner) => [banner.brandName, banner])).values()
   );
-  const sponsors = hasCityTargeting && hasCitySponsor ? citySponsorsUnique : allSponsors;
+
+  const sponsors = isLocationPreviewLock
+    ? getPartnerShowcaseGridBanners()
+    : hasCityTargeting && hasCitySponsor
+      ? citySponsorsUnique
+      : allSponsors;
+
+  const lockedCardHref = isLocationPreviewLock ? WHATSAPP_SEM_LOCALIZACAO : WHATSAPP_RESERVA_BANNER_CIDADE;
 
   return (
     <div className="space-y-6">
@@ -60,38 +63,78 @@ function SponsorsPage() {
         <h1 className="text-3xl font-bold">Patrocinadores e parceiros</h1>
       </div>
 
+      {isLocationPreviewLock ? (
+        <div className="rounded-xl border border-amber-200/80 bg-amber-50/90 px-4 py-3 text-sm text-amber-950">
+          <p className="font-medium text-amber-950">Modo visualização</p>
+          <p className="mt-1 text-amber-900/90">
+            Os cards abaixo mostram como ficam os patrocinadores no LowMeet (foto e história de
+            exemplo). Eles estão bloqueados até você informar estado e cidade no seletor acima —
+            assim aparecem só os parceiros reais da sua região. Clique em um card ou use o WhatsApp
+            para falar comigo sobre vaga na sua cidade.
+          </p>
+        </div>
+      ) : null}
+
       <p className="max-w-4xl text-sm text-muted-foreground">
         Conheça as marcas que fortalecem o LowMeet e ajudam a cena automotiva a crescer.
-        Cada parceiro contribui com história, estrutura e apoio para os eventos da
-        comunidade.
+        Cada parceiro contribui com história, estrutura e apoio para os eventos da comunidade.
       </p>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {sponsors.map((sponsor) => {
+          const showLockedOverlay = isLocationPreviewLock || shouldShowCityPlaceholder;
+
           const sponsorCard = (
             <Card
-              key={sponsor.id}
               className={`relative overflow-hidden transition-all duration-300 ${
-                shouldShowCityPlaceholder ? "group-hover:-translate-y-0.5 group-hover:shadow-xl" : ""
+                showLockedOverlay ? "group-hover:-translate-y-0.5 group-hover:shadow-xl" : ""
               }`}
             >
-              <img
-                src={sponsor.image}
-                alt={`Patrocinador ${sponsor.brandName}`}
-                className={`h-44 w-full object-cover transition-transform duration-500 ${
-                  shouldShowCityPlaceholder ? "opacity-30 blur-[1.5px] group-hover:scale-105" : ""
-                }`}
-              />
-              <CardHeader className={`space-y-1 ${shouldShowCityPlaceholder ? "opacity-45" : ""}`}>
+              <div className="relative h-44 w-full shrink-0 overflow-hidden bg-slate-100">
+                <img
+                  src={sponsor.image}
+                  alt={`Patrocinador ${sponsor.brandName}`}
+                  className={`h-full w-full object-cover transition-transform duration-500 ${
+                    isLocationPreviewLock
+                      ? "opacity-35 blur-[1.5px] group-hover:scale-105"
+                      : shouldShowCityPlaceholder
+                        ? "opacity-30 blur-[1.5px] group-hover:scale-105"
+                        : ""
+                  }`}
+                  style={{ objectPosition: `center ${Number(sponsor.focusY ?? 50)}%` }}
+                />
+                {isLocationPreviewLock ? (
+                  <>
+                    <div className="absolute inset-0 bg-black/65 transition-colors duration-300 group-hover:bg-black/55" />
+                    <div className="absolute inset-0 z-[1] flex flex-col items-center justify-center px-3 text-center text-white">
+                      <Lock
+                        size={18}
+                        aria-hidden="true"
+                        className="mb-1.5 transition-transform duration-300 group-hover:scale-110"
+                      />
+                      <p className="text-xs font-semibold leading-tight md:text-sm">
+                        Visualização padrão — bloqueado
+                      </p>
+                      <p className="mt-1 text-[11px] leading-tight opacity-95 md:text-xs">
+                        Defina cidade e estado para ver patrocinadores da sua região.
+                      </p>
+                      <p className="mt-1 text-[11px] leading-tight opacity-90 md:text-xs">
+                        {SPONSOR_RESERVE_CTA}
+                      </p>
+                    </div>
+                  </>
+                ) : null}
+              </div>
+              <CardHeader className="relative z-10 space-y-1 bg-card">
                 <p className="text-xs font-semibold uppercase tracking-wide text-primary">
                   {sponsor.type}
                 </p>
                 <CardTitle>{sponsor.brandName}</CardTitle>
               </CardHeader>
-              <CardContent className={`space-y-3 ${shouldShowCityPlaceholder ? "opacity-45" : ""}`}>
+              <CardContent className="relative z-10 space-y-3 bg-card">
                 <p className="text-sm text-muted-foreground">{sponsor.story}</p>
-                {shouldShowCityPlaceholder ? (
-                  <span className="inline-flex text-sm font-medium text-primary/70">
+                {showLockedOverlay ? (
+                  <span className="inline-flex text-sm font-medium text-primary/80">
                     Conhecer parceiro
                   </span>
                 ) : (
@@ -105,7 +148,7 @@ function SponsorsPage() {
                   </a>
                 )}
               </CardContent>
-              {shouldShowCityPlaceholder && (
+              {shouldShowCityPlaceholder && !isLocationPreviewLock ? (
                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/65 px-4 text-center text-white transition-colors duration-300 group-hover:bg-black/55">
                   <Lock
                     size={18}
@@ -113,21 +156,27 @@ function SponsorsPage() {
                     className="mb-1.5 transition-transform duration-300 group-hover:scale-110"
                   />
                   <p className="text-xs font-semibold leading-tight transition-colors duration-300 group-hover:text-white md:text-sm">
-                    Banner disponível para patrocinador em {resolvedCity} - {resolvedState}
+                    Espaço disponível para patrocinador em {resolvedCity} — {resolvedState}
                   </p>
                   <p className="mt-1 text-[11px] leading-tight opacity-95 transition-colors duration-300 group-hover:text-white md:text-xs">
-                    Clique para ser um patrocinador e reservar este espaço.
+                    {SPONSOR_RESERVE_CTA}
                   </p>
                 </div>
-              )}
+              ) : null}
             </Card>
           );
 
-          if (!shouldShowCityPlaceholder) return sponsorCard;
+          if (!showLockedOverlay) {
+            return (
+              <div key={sponsor.id} className="contents">
+                {sponsorCard}
+              </div>
+            );
+          }
           return (
             <a
-              key={`locked-${sponsor.id}`}
-              href={citySponsorWhatsappLink}
+              key={isLocationPreviewLock ? `preview-${sponsor.id}` : `locked-${sponsor.id}`}
+              href={lockedCardHref}
               target="_blank"
               rel="noreferrer"
               className="group block"
@@ -141,7 +190,7 @@ function SponsorsPage() {
       <div className="flex flex-wrap items-center justify-center gap-3 border-t pt-4">
         <p className="text-sm font-medium text-slate-700">Quer se tornar um patrocinador?</p>
         <a
-          href={whatsappLink}
+          href={WHATSAPP_PATROCINADOR_OFICIAL}
           target="_blank"
           rel="noreferrer"
           aria-label="Entrar em contato pelo WhatsApp"

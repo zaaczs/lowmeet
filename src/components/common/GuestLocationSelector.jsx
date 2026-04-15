@@ -42,22 +42,42 @@ function GuestLocationSelector({
     setIsEditing(false);
   };
 
+  const handleClearLocation = () => {
+    setError("");
+    onSaveLocation?.({ state: "", city: "" });
+    setDraftState("");
+    setDraftCity("");
+    setIsEditing(false);
+  };
+
   return (
     <div className="rounded-xl border bg-white/80 px-3 py-2 text-xs text-muted-foreground">
       <div className="flex flex-wrap items-center gap-2">
         <p>{helperMessage}</p>
         {hasLocation && !isEditing && (
-          <button
-            type="button"
-            onClick={() => setIsEditing(true)}
-            className="font-medium text-primary underline underline-offset-2"
-          >
-            Não é sua cidade? alterar
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => setIsEditing(true)}
+              className="font-medium text-primary underline underline-offset-2"
+            >
+              Não é sua cidade? alterar
+            </button>
+            <span className="text-muted-foreground/80" aria-hidden="true">
+              ·
+            </span>
+            <button
+              type="button"
+              onClick={handleClearLocation}
+              className="font-medium text-primary underline underline-offset-2"
+            >
+              Remover localização
+            </button>
+          </>
         )}
       </div>
       {shouldRenderEditor && (
-        <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+        <div className="mt-2 grid gap-2 sm:grid-cols-2">
           <Select
             value={draftState}
             onChange={(event) => {
@@ -90,13 +110,18 @@ function GuestLocationSelector({
               </option>
             ))}
           </Select>
-          <Button type="button" size="sm" onClick={handleSave}>
-            Usar cidade
-          </Button>
-          <p className="sm:col-span-3 text-[11px]">
+          <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
+            <Button type="button" size="sm" onClick={handleSave}>
+              Usar cidade
+            </Button>
+            <Button type="button" size="sm" variant="outline" onClick={handleClearLocation}>
+              Remover localização
+            </Button>
+          </div>
+          <p className="sm:col-span-2 text-[11px]">
             Após salvar, os banners e eventos em destaque serão ajustados para sua cidade e estado.
           </p>
-          <p className="sm:col-span-3 text-[11px]">
+          <p className="sm:col-span-2 text-[11px]">
             Quer anunciar nesta cidade?{" "}
             <a
               href="https://wa.me/5585997732508?text=Ol%C3%A1%2C%20quero%20anunciar%20nesta%20cidade%20no%20LowMeet."
@@ -108,7 +133,7 @@ function GuestLocationSelector({
             </a>{" "}
             ou <Link to="/login" className="font-medium text-primary underline underline-offset-2">criar conta</Link>.
           </p>
-          {error && <p className="sm:col-span-3 text-[11px] text-red-600">{error}</p>}
+          {error && <p className="sm:col-span-2 text-[11px] text-red-600">{error}</p>}
         </div>
       )}
     </div>

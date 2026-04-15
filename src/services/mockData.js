@@ -12,6 +12,10 @@ export const mockUsers = [
     email: "org@lowmeet.com",
     password: "123456",
     role: "ORGANIZADOR",
+    state: "CE",
+    city: "Fortaleza",
+    organizerScopeState: "CE",
+    organizerScopeCity: "",
   },
   {
     id: "u-visit-1",
@@ -144,36 +148,275 @@ export const mockPendingApprovalEvents = [
   ...mockPendingApprovalStressEvents,
 ];
 
-const additionalStressTestEvents = Array.from({ length: 15 }, (_, index) => {
+const themedStressEvents = [
+  {
+    name: "Encontro Beneficente Pascoa Sobre Rodas",
+    type: "Encontro",
+    description: "Arrecadacao de alimentos, sorteios e encontro solidario com clubes da regiao.",
+    datetime: "2026-04-14T10:00:00",
+    city: "Fortaleza",
+    state: "CE",
+    street: "Av. Beira Mar",
+    number: "2100",
+    complement: "Praca de Eventos",
+    location: "Av. Beira Mar, 2100 - Praca de Eventos",
+    ticketType: "free",
+    ticketPrice: null,
+    image:
+      "https://images.unsplash.com/photo-1592853625601-bb9d23da12fc?auto=format&fit=crop&w=1200&q=80",
+    tags: ["beneficente", "familia", "solidario"],
+  },
+  {
+    name: "Track Day Ceara Fast Laps",
+    type: "Track Day",
+    description: "Baterias por nivel com instrutores, cronometragem oficial e area tecnica.",
+    datetime: "2026-04-19T08:30:00",
+    city: "Eusebio",
+    state: "CE",
+    street: "Autodromo Internacional do Ceara",
+    number: "S/N",
+    complement: "Box 12",
+    location: "Autodromo Internacional do Ceara - Box 12",
+    ticketType: "paid",
+    ticketPrice: 95,
+    image:
+      "https://images.unsplash.com/photo-1511919884226-fd3cad34687c?auto=format&fit=crop&w=1200&q=80",
+    tags: ["trackday", "hotlap", "pilotagem"],
+  },
+  {
+    name: "Drift Day Arena Sul",
+    type: "Encontro",
+    description: "Show de drift com pilotos convidados, area de boxes aberta e meet no paddock.",
+    datetime: "2026-04-25T16:00:00",
+    city: "Curitiba",
+    state: "PR",
+    street: "Rodovia BR-116",
+    number: "KM 98",
+    complement: "Arena Drift",
+    location: "Rodovia BR-116, KM 98 - Arena Drift",
+    ticketType: "paid",
+    ticketPrice: 48,
+    image:
+      "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1200&q=80",
+    tags: ["driftday", "fumaca", "paddock"],
+  },
+  {
+    name: "Encontro no Posto Premium 24h",
+    type: "Encontro",
+    description: "Meet de madrugada com cafe, fotos profissionais e area reservada para clubes.",
+    datetime: "2026-04-29T22:30:00",
+    city: "Sao Paulo",
+    state: "SP",
+    street: "Av. dos Bandeirantes",
+    number: "4900",
+    complement: "Posto Premium 24h",
+    location: "Av. dos Bandeirantes, 4900 - Posto Premium 24h",
+    ticketType: "free",
+    ticketPrice: null,
+    image:
+      "https://images.unsplash.com/photo-1493238792000-8113da705763?auto=format&fit=crop&w=1200&q=80",
+    tags: ["posto", "madrugada", "clubes"],
+  },
+  {
+    name: "Expo JDM Primavera",
+    type: "Exposição",
+    description: "Exposicao de projetos JDM, concurso de cofre e showcase de importados raros.",
+    datetime: "2026-05-02T14:00:00",
+    city: "Campinas",
+    state: "SP",
+    street: "Parque de Exposicoes",
+    number: "1180",
+    complement: "Pavilhao A",
+    location: "Parque de Exposicoes, 1180 - Pavilhao A",
+    ticketType: "paid",
+    ticketPrice: 30,
+    image:
+      "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=1200&q=80",
+    tags: ["jdm", "importados", "showcase"],
+  },
+  {
+    name: "Arrancada Turbo Cup Maio",
+    type: "Arrancada",
+    description: "Tomada de tempo em 201 metros com categorias turbo, aspirado e tracao integral.",
+    datetime: "2026-05-05T12:00:00",
+    city: "Curitiba",
+    state: "PR",
+    street: "Complexo Velocitta Sul",
+    number: "900",
+    complement: "Reta Principal",
+    location: "Complexo Velocitta Sul, 900 - Reta Principal",
+    ticketType: "paid",
+    ticketPrice: 60,
+    image:
+      "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=80",
+    tags: ["arrancada", "turbo", "tempo"],
+  },
+  {
+    name: "Encontro Beneficente Gasolina e Sorrisos",
+    type: "Encontro",
+    description: "Evento para arrecadar brinquedos com carreata solidaria e area kids.",
+    datetime: "2026-05-08T09:30:00",
+    city: "Fortaleza",
+    state: "CE",
+    street: "Av. Washington Soares",
+    number: "3800",
+    complement: "Shopping Open Park",
+    location: "Av. Washington Soares, 3800 - Shopping Open Park",
+    ticketType: "free",
+    ticketPrice: null,
+    image:
+      "https://images.unsplash.com/photo-1542362567-b07e54358753?auto=format&fit=crop&w=1200&q=80",
+    tags: ["beneficente", "carreata", "solidario"],
+  },
+  {
+    name: "Track Day Nordeste Pro Series",
+    type: "Track Day",
+    description: "Voltas livres com briefing tecnico, telemetria basica e coaching na pista.",
+    datetime: "2026-05-11T08:00:00",
+    city: "Fortaleza",
+    state: "CE",
+    street: "Autodromo Virgilio Tavora",
+    number: "S/N",
+    complement: "Box 5",
+    location: "Autodromo Virgilio Tavora - Box 5",
+    ticketType: "paid",
+    ticketPrice: 110,
+    image:
+      "https://images.unsplash.com/photo-1504215680853-026ed2a45def?auto=format&fit=crop&w=1200&q=80",
+    tags: ["trackday", "proseries", "telemetria"],
+  },
+  {
+    name: "Drift Day Sunset Paddock",
+    type: "Encontro",
+    description: "Sessao de drift ao por do sol com arquibancada livre e food park.",
+    datetime: "2026-05-14T17:00:00",
+    city: "Goiania",
+    state: "GO",
+    street: "Autodromo Ayrton Senna",
+    number: "S/N",
+    complement: "Curva 3",
+    location: "Autodromo Ayrton Senna - Curva 3",
+    ticketType: "paid",
+    ticketPrice: 52,
+    image:
+      "https://images.unsplash.com/photo-1542282088-fe8426682b8f?auto=format&fit=crop&w=1200&q=80",
+    tags: ["driftday", "sunset", "paddock"],
+  },
+  {
+    name: "Meet de Posto Rota 85",
+    type: "Encontro",
+    description: "Encontro casual noturno para fotos, resenha e cafe com a galera.",
+    datetime: "2026-05-16T21:00:00",
+    city: "Belo Horizonte",
+    state: "MG",
+    street: "Av. Cristiano Machado",
+    number: "8500",
+    complement: "Posto Rota 85",
+    location: "Av. Cristiano Machado, 8500 - Posto Rota 85",
+    ticketType: "free",
+    ticketPrice: null,
+    image:
+      "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1200&q=80",
+    tags: ["posto", "night", "resenha"],
+  },
+  {
+    name: "Expo Classics e Muscle Cars",
+    type: "Exposição",
+    description: "Exposicao premium de classicos restaurados e muscle cars com jurados convidados.",
+    datetime: "2026-05-18T10:00:00",
+    city: "Porto Alegre",
+    state: "RS",
+    street: "Av. Padre Cacique",
+    number: "891",
+    complement: "Pavilhao C",
+    location: "Av. Padre Cacique, 891 - Pavilhao C",
+    ticketType: "paid",
+    ticketPrice: 25,
+    image:
+      "https://images.unsplash.com/photo-1502877338535-766e1452684a?auto=format&fit=crop&w=1200&q=80",
+    tags: ["classicos", "muscle", "restauracao"],
+  },
+  {
+    name: "Arrancada Noturna 402m",
+    type: "Arrancada",
+    description: "Disputas noturnas em 402 metros com grid por categoria e narração ao vivo.",
+    datetime: "2026-05-20T19:30:00",
+    city: "Londrina",
+    state: "PR",
+    street: "Autodromo Internacional Ayrton Senna",
+    number: "200",
+    complement: "Reta Sul",
+    location: "Autodromo Internacional Ayrton Senna, 200 - Reta Sul",
+    ticketType: "paid",
+    ticketPrice: 70,
+    image:
+      "https://images.unsplash.com/photo-1517524008697-84bbe3c3fd98?auto=format&fit=crop&w=1200&q=80",
+    tags: ["arrancada", "night", "402m"],
+  },
+  {
+    name: "Encontro Familia no Parque",
+    type: "Encontro",
+    description: "Evento diurno com area kids, picnic automotivo e arrecadacao de roupas.",
+    datetime: "2026-05-22T09:00:00",
+    city: "Recife",
+    state: "PE",
+    street: "Av. Boa Viagem",
+    number: "3400",
+    complement: "Parque da Orla",
+    location: "Av. Boa Viagem, 3400 - Parque da Orla",
+    ticketType: "free",
+    ticketPrice: null,
+    image:
+      "https://images.unsplash.com/photo-1486496572940-2bb2341fdbdf?auto=format&fit=crop&w=1200&q=80",
+    tags: ["familia", "beneficente", "parque"],
+  },
+  {
+    name: "Track Day Time Attack Club",
+    type: "Track Day",
+    description: "Sessao de time attack com ranking oficial e briefing de seguranca completo.",
+    datetime: "2026-05-24T08:00:00",
+    city: "Mogi Guacu",
+    state: "SP",
+    street: "Autodromo Velo Citta",
+    number: "S/N",
+    complement: "Paddock Principal",
+    location: "Autodromo Velo Citta - Paddock Principal",
+    ticketType: "paid",
+    ticketPrice: 130,
+    image:
+      "https://images.unsplash.com/photo-1514316454349-750a7fd3da3a?auto=format&fit=crop&w=1200&q=80",
+    tags: ["trackday", "timeattack", "ranking"],
+  },
+  {
+    name: "Drift Day Street Heroes",
+    type: "Encontro",
+    description: "Drift show com batalhas em dupla, meet de projetos e premios especiais.",
+    datetime: "2026-05-29T15:30:00",
+    city: "Sao Paulo",
+    state: "SP",
+    street: "Centro de Eventos Zona Leste",
+    number: "210",
+    complement: "Arena 2",
+    location: "Centro de Eventos Zona Leste, 210 - Arena 2",
+    ticketType: "paid",
+    ticketPrice: 50,
+    image:
+      "https://images.unsplash.com/photo-1503736334956-4c8f8e92946d?auto=format&fit=crop&w=1200&q=80",
+    tags: ["driftday", "batalha", "street"],
+  },
+];
+
+const additionalStressTestEvents = themedStressEvents.map((event, index) => {
   const eventNumber = index + 6;
-  const isPaid = eventNumber % 2 === 0;
-  const city = eventNumber % 3 === 0 ? "Fortaleza" : eventNumber % 3 === 1 ? "Curitiba" : "Sao Paulo";
-  const state = city === "Fortaleza" ? "CE" : city === "Curitiba" ? "PR" : "SP";
-  const day = String((eventNumber % 28) + 1).padStart(2, "0");
-  const hour = String((eventNumber % 12) + 9).padStart(2, "0");
-  const eventType = eventNumber % 4 === 0 ? "Track Day" : eventNumber % 4 === 1 ? "Encontro" : eventNumber % 4 === 2 ? "Exposição" : "Arrancada";
+  const createdDay = String((index % 20) + 1).padStart(2, "0");
 
   return {
     id: `ev-test-${eventNumber}`,
-    name: `Evento Teste ${eventNumber}`,
-    type: eventType,
-    description: `Evento de teste ${eventNumber} para validar busca por nome, paginação e limite de exibição.`,
-    datetime: `2026-04-${day}T${hour}:00:00`,
-    city,
-    state,
-    street: `Avenida Teste ${eventNumber}`,
-    number: `${100 + eventNumber}`,
-    complement: "",
-    location: `Avenida Teste ${eventNumber}, ${100 + eventNumber}`,
-    ticketType: isPaid ? "paid" : "free",
-    ticketPrice: isPaid ? 20 + eventNumber : null,
-    image:
-      "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1200&q=80",
+    ...event,
     organizerId: "u-org-1",
     organizerName: "Garage Norte",
-    tags: ["teste", "paginacao", "busca"],
     status: "approved",
-    createdAt: `2026-03-${String((eventNumber % 28) + 1).padStart(2, "0")}T10:00:00`,
+    createdAt: `2026-03-${createdDay}T10:00:00`,
   };
 });
 
@@ -225,13 +468,18 @@ export const mockEvents = [
   ...mockPendingApprovalEvents,
 ];
 
+const normalizeFortalezaLocation = ({ street, number, complement }) => {
+  if (complement) return `${street}, ${number} - ${complement}`;
+  return `${street}, ${number}`;
+};
+
 export const mockStressTestEvents = [
   {
     id: "ev-test-1",
     name: "Warm-up Stance Meetup",
     type: "Encontro",
     description: "Encontro de aquecimento com fotos, som e area gourmet.",
-    datetime: "2026-04-12T09:00:00",
+    datetime: "2026-04-07T15:00:00",
     city: "Sao Paulo",
     state: "SP",
     street: "Av. Santos Dumont",
@@ -253,7 +501,7 @@ export const mockStressTestEvents = [
     name: "Drag Simulado Night",
     type: "Arrancada",
     description: "Sessao controlada com alinhamento e tomada de tempo.",
-    datetime: "2026-04-12T11:00:00",
+    datetime: "2026-04-10T18:00:00",
     city: "Sao Paulo",
     state: "SP",
     street: "Rua do Autodromo",
@@ -275,7 +523,7 @@ export const mockStressTestEvents = [
     name: "Track Clinic Interlagos",
     type: "Track Day",
     description: "Clinica de pilotagem e voltas monitoradas.",
-    datetime: "2026-04-12T14:00:00",
+    datetime: "2026-04-13T09:00:00",
     city: "Sao Paulo",
     state: "SP",
     street: "Autodromo de Interlagos",
@@ -294,10 +542,10 @@ export const mockStressTestEvents = [
   },
   {
     id: "ev-test-4",
-    name: "Sunset Car Audio",
+    name: "Encontro Beneficente Giro Solidario",
     type: "Encontro",
-    description: "Show de som e iluminacao com premiacoes rapidas.",
-    datetime: "2026-04-12T16:30:00",
+    description: "Encontro beneficente com arrecadacao de cestas basicas e sorteios.",
+    datetime: "2026-04-16T12:00:00",
     city: "Sao Paulo",
     state: "SP",
     street: "Av. Cruzeiro do Sul",
@@ -307,10 +555,10 @@ export const mockStressTestEvents = [
     ticketType: "free",
     ticketPrice: null,
     image:
-      "https://images.unsplash.com/photo-1504215680853-026ed2a45def?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?auto=format&fit=crop&w=1200&q=80",
     organizerId: "u-org-1",
     organizerName: "Garage Norte",
-    tags: ["som", "sunset"],
+    tags: ["beneficente", "solidario", "encontro"],
     status: "approved",
     createdAt: "2026-03-28T12:30:00",
   },
@@ -319,7 +567,7 @@ export const mockStressTestEvents = [
     name: "Midnight Drift Session",
     type: "Encontro",
     description: "Sessao noturna com exibicao e area para publico.",
-    datetime: "2026-04-12T22:00:00",
+    datetime: "2026-05-01T20:30:00",
     city: "Sao Paulo",
     state: "SP",
     street: "Rua das Oficinas",
@@ -329,7 +577,7 @@ export const mockStressTestEvents = [
     ticketType: "paid",
     ticketPrice: 45,
     image:
-      "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=1200&q=80",
     organizerId: "u-org-1",
     organizerName: "Garage Norte",
     tags: ["drift", "night"],
@@ -337,20 +585,40 @@ export const mockStressTestEvents = [
     createdAt: "2026-03-29T08:00:00",
   },
   ...additionalStressTestEvents,
-];
+].map((event) => ({
+  ...event,
+  city: "Fortaleza",
+  state: "CE",
+  location: normalizeFortalezaLocation(event),
+}));
+
+/** Seis parceiros de referência — imagens em /public/banners (mesma origem do app; sem CDN externa). */
+export const PARTNER_SHOWCASE_BANNER_IDS = ["bn-1", "bn-2", "bn-3", "bn-4", "bn-5", "bn-6"];
+
+export function showcaseBannerImageUrl(bannerId) {
+  const base = String(import.meta.env.BASE_URL || "/");
+  return `${base}banners/${bannerId}.jpg`;
+}
+
+export function syncShowcaseBannerLocalImages(banners) {
+  const ids = new Set(PARTNER_SHOWCASE_BANNER_IDS);
+  return banners.map((banner) =>
+    ids.has(banner.id) ? { ...banner, image: showcaseBannerImageUrl(banner.id) } : banner
+  );
+}
 
 export const mockBanners = [
   {
     id: "bn-1",
     brandName: "TurboMax Performance",
     type: "oficina",
-    image:
-      "https://images.unsplash.com/photo-1487754180451-c456f719a1fc?auto=format&fit=crop&w=1200&q=80",
+    image: showcaseBannerImageUrl("bn-1"),
     link: "https://instagram.com",
     position: "home-top",
     targetingLevel: "NATIONAL",
-    state: "",
-    city: "",
+    state: "CE",
+    city: "Fortaleza",
+    focusY: 42,
     active: true,
     story:
       "A TurboMax nasceu da paixão por preparação turbo e acerto fino para projetos de rua e pista. Hoje é referência em performance confiável.",
@@ -359,13 +627,13 @@ export const mockBanners = [
     id: "bn-2",
     brandName: "DT Garage Store",
     type: "loja",
-    image:
-      "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=1200&q=80",
+    image: showcaseBannerImageUrl("bn-2"),
     link: "https://wa.me/5511999999999",
     position: "home-middle",
     targetingLevel: "NATIONAL",
-    state: "",
-    city: "",
+    state: "CE",
+    city: "Fortaleza",
+    focusY: 48,
     active: true,
     story:
       "A DT Garage Store começou como uma pequena loja de acessórios e virou ponto de encontro de quem busca peças, estilo e suporte para projetos custom.",
@@ -374,13 +642,13 @@ export const mockBanners = [
     id: "bn-3",
     brandName: "Morbus Estética",
     type: "estética automotiva",
-    image:
-      "https://images.unsplash.com/photo-1607860108855-64acf2078ed9?auto=format&fit=crop&w=1200&q=80",
+    image: showcaseBannerImageUrl("bn-3"),
     link: "https://example.com",
     position: "home-bottom",
     targetingLevel: "NATIONAL",
-    state: "",
-    city: "",
+    state: "CE",
+    city: "Fortaleza",
+    focusY: 40,
     active: true,
     story:
       "A Morbus Estética atua no ecossistema automotivo apoiando eventos e iniciativas da comunidade, conectando marcas e apaixonados por carros.",
@@ -389,13 +657,13 @@ export const mockBanners = [
     id: "bn-4",
     brandName: "Américo Pneus",
     type: "loja de pneus",
-    image:
-      "https://images.unsplash.com/photo-1607861716497-e65ab29fc7ac?auto=format&fit=crop&w=1200&q=80",
+    image: showcaseBannerImageUrl("bn-4"),
     link: "https://instagram.com",
     position: "events-top",
     targetingLevel: "NATIONAL",
-    state: "",
-    city: "",
+    state: "CE",
+    city: "Fortaleza",
+    focusY: 45,
     active: true,
     story:
       "A Américo Pneus é focada em manutenção especializada e upgrades para veículos esportivos, com histórico forte em track days e encontros técnicos.",
@@ -404,13 +672,13 @@ export const mockBanners = [
     id: "bn-5",
     brandName: "Street Customs",
     type: "customização de carros",
-    image:
-      "https://images.unsplash.com/photo-1616455579100-2ceaa4eb2d37?auto=format&fit=crop&w=1200&q=80",
+    image: showcaseBannerImageUrl("bn-5"),
     link: "https://example.com",
     position: "events-bottom",
     targetingLevel: "NATIONAL",
-    state: "",
-    city: "",
+    state: "CE",
+    city: "Fortaleza",
+    focusY: 52,
     active: true,
     story:
       "A Street Customs construiu sua história transformando carros comuns em projetos únicos, valorizando acabamento premium e identidade visual.",
@@ -419,15 +687,27 @@ export const mockBanners = [
     id: "bn-6",
     brandName: "West Sons",
     type: "som automotivo",
-    image:
-      "https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&w=1200&q=80",
+    image: showcaseBannerImageUrl("bn-6"),
     link: "https://instagram.com",
     position: "events-after-calendar",
     targetingLevel: "NATIONAL",
-    state: "",
-    city: "",
+    state: "CE",
+    city: "Fortaleza",
+    focusY: 38,
     active: true,
     story:
       "A West Sons promove ativações com marcas e encontros temáticos, trazendo experiências para o público logo após o calendário de eventos.",
   },
 ];
+
+export function getPartnerShowcaseGridBanners() {
+  return PARTNER_SHOWCASE_BANNER_IDS.map((id) => mockBanners.find((b) => b.id === id)).filter(Boolean);
+}
+
+export function getPartnerShowcaseBannerForPosition(position) {
+  return (
+    mockBanners.find(
+      (b) => PARTNER_SHOWCASE_BANNER_IDS.includes(b.id) && b.position === position
+    ) ?? null
+  );
+}

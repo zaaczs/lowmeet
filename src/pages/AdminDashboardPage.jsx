@@ -6,6 +6,7 @@ import {
   Eye,
   Handshake,
   Trash2,
+  UserPlus,
   Users,
   X,
 } from "lucide-react";
@@ -27,7 +28,8 @@ import {
   YAxis,
 } from "recharts";
 import { useAppData } from "../context/AppDataContext";
-import { useAuth } from "../context/AuthContext";
+import { ROLES, useAuth } from "../context/AuthContext";
+import { organizerCanModerateEvent } from "../lib/organizerScope";
 import { processImageUpload } from "../lib/imageProcessing";
 import { useBrazilLocations } from "../hooks/useBrazilLocations";
 
@@ -216,6 +218,12 @@ const ADMIN_MODULES = [
     label: "Usuários",
     description: "Controle de usuários e status de acesso.",
     icon: Users,
+  },
+  {
+    key: "create-users",
+    label: "Criar usuários",
+    description: "Cadastrar visitante ou organizador com permissões de localização.",
+    icon: UserPlus,
   },
   {
     key: "approval",
@@ -617,7 +625,13 @@ function BannerImageEditor({ editor, setEditor, helperText }) {
 }
 
 function AdminDashboardPage() {
-  const { users, user: currentUser, updateUserByAdmin, deleteUserByAdmin } = useAuth();
+  const {
+    users,
+    user: currentUser,
+    updateUserByAdmin,
+    deleteUserByAdmin,
+    createUserByAdmin,
+  } = useAuth();
   const {
     events,
     pendingEvents,
@@ -660,7 +674,23 @@ function AdminDashboardPage() {
     email: "",
     role: "VISITANTE",
     password: "",
+    organizerScopeState: "",
+    organizerScopeCity: "",
+    organizerApprovalScope: "state",
   });
+  const [createUserForm, setCreateUserForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: ROLES.VISITOR,
+    profileState: "",
+    profileCity: "",
+    organizerScopeCity: "",
+    organizerApprovalScope: "state",
+  });
+  const [createUserError, setCreateUserError] = useState("");
+  const [createUserSuccess, setCreateUserSuccess] = useState("");
+  const [approvalActionError, setApprovalActionError] = useState("");
   const [userActionError, setUserActionError] = useState("");
   const [userSearchTerm, setUserSearchTerm] = useState("");
   const [usersPage, setUsersPage] = useState(1);
@@ -668,7 +698,9 @@ function AdminDashboardPage() {
   const [pendingPage, setPendingPage] = useState(1);
   const [eventsManagementPage, setEventsManagementPage] = useState(1);
   const [selectedPendingEventId, setSelectedPendingEventId] = useState(null);
-  const [activeModule, setActiveModule] = useState("dashboard");
+  const [activeModule, setActiveModule] = useState(() =>
+    currentUser?.role === ROLES.ORGANIZER ? "approval" : "dashboard"
+  );
   const [moduleLocationFilters, setModuleLocationFilters] = useState({
     users: { state: "", city: "" },
     approval: { state: "", city: "" },
@@ -681,6 +713,24 @@ function AdminDashboardPage() {
     loadingStates: loadingBannerStates,
     loadingCities: loadingBannerCities,
   } = useBrazilLocations(bannerEditForm.state);
+  const {
+    stateOptions: createProfileStateOptions,
+    cityOptions: createProfileCityOptions,
+    loadingStates: loadingCreateProfileStates,
+    loadingCities: loadingCreateProfileCities,
+  } = useBrazilLocations(createUserForm.profileState);
+  const {
+    stateOptions: editOrganizerStateOptions,
+    cityOptions: editOrganizerCityOptions,
+    loadingStates: loadingEditOrganizerStates,
+    loadingCities: loadingEditOrganizerCities,
+  } = useBrazilLocations(userForm.organizerScopeState);
+
+  const isFullAdmin = currentUser?.role === ROLES.ADMIN;
+  const visibleModules = useMemo(() => {
+    if (isFullAdmin) return ADMIN_MODULES;
+    return ADMIN_MODULES.filter((module) => module.key === "approval");
+  }, [isFullAdmin]);
 
   const USERS_PAGE_SIZE = 10;
   const PENDING_EVENTS_PAGE_SIZE = 10;
@@ -895,12 +945,17 @@ function AdminDashboardPage() {
           return nameMatch || emailMatch;
         });
 
-    return usersBySearch.filter((account) =>
+    const filtered = usersBySearch.filter((account) =>
       matchesStateCityFilter(
         { state: account.state, city: account.city },
         usersLocationFilter
       )
     );
+    return [...filtered].sort((a, b) => {
+      const ta = new Date(a.createdAt || 0).getTime();
+      const tb = new Date(b.createdAt || 0).getTime();
+      return tb - ta;
+    });
   }, [uniqueUsers, userSearchTerm, usersLocationFilter]);
   const totalUsersPages = Math.max(1, Math.ceil(filteredUsers.length / USERS_PAGE_SIZE));
   const pendingLocationOptions = useMemo(
@@ -925,6 +980,10 @@ function AdminDashboardPage() {
       matchesStateCityFilter({ state: event.state, city: event.city }, approvalLocationFilter)
     );
   }, [approvalLocationFilter, pendingEvents, pendingSearchTerm]);
+  const approvalListEvents = useMemo(() => {
+    if (currentUser?.role !== ROLES.ORGANIZER) return filteredPendingEvents;
+    return filteredPendingEvents.filter((event) => organizerCanModerateEvent(currentUser, event));
+  }, [currentUser, filteredPendingEvents]);
   const sponsorsLocationOptions = useMemo(
     () =>
       buildLocationOptions(
@@ -964,15 +1023,15 @@ function AdminDashboardPage() {
   );
   const totalPendingPages = Math.max(
     1,
-    Math.ceil(filteredPendingEvents.length / PENDING_EVENTS_PAGE_SIZE)
+    Math.ceil(approvalListEvents.length / PENDING_EVENTS_PAGE_SIZE)
   );
   const totalEventsManagementPages = Math.max(
     1,
     Math.ceil(filteredManagementEvents.length / EVENTS_MANAGEMENT_PAGE_SIZE)
   );
   const selectedPendingEvent = useMemo(
-    () => pendingEvents.find((event) => event.id === selectedPendingEventId) ?? null,
-    [pendingEvents, selectedPendingEventId]
+    () => approvalListEvents.find((event) => event.id === selectedPendingEventId) ?? null,
+    [approvalListEvents, selectedPendingEventId]
   );
   const paginatedUsers = useMemo(() => {
     const start = (usersPage - 1) * USERS_PAGE_SIZE;
@@ -980,8 +1039,8 @@ function AdminDashboardPage() {
   }, [filteredUsers, usersPage]);
   const paginatedPendingEvents = useMemo(() => {
     const start = (pendingPage - 1) * PENDING_EVENTS_PAGE_SIZE;
-    return filteredPendingEvents.slice(start, start + PENDING_EVENTS_PAGE_SIZE);
-  }, [filteredPendingEvents, pendingPage]);
+    return approvalListEvents.slice(start, start + PENDING_EVENTS_PAGE_SIZE);
+  }, [approvalListEvents, pendingPage]);
   const paginatedManagementEvents = useMemo(() => {
     const start = (eventsManagementPage - 1) * EVENTS_MANAGEMENT_PAGE_SIZE;
     return filteredManagementEvents.slice(start, start + EVENTS_MANAGEMENT_PAGE_SIZE);
@@ -1009,7 +1068,7 @@ function AdminDashboardPage() {
 
   useEffect(() => {
     setPendingPage(1);
-  }, [pendingSearchTerm]);
+  }, [pendingSearchTerm, approvalLocationFilter, currentUser?.role]);
 
   useEffect(() => {
     setPendingPage((previous) => Math.min(previous, totalPendingPages));
@@ -1028,23 +1087,30 @@ function AdminDashboardPage() {
 
   useEffect(() => {
     if (!selectedPendingEventId) return;
-    const isVisibleInCurrentFilter = filteredPendingEvents.some(
+    const isVisibleInCurrentFilter = approvalListEvents.some(
       (event) => event.id === selectedPendingEventId
     );
     if (!isVisibleInCurrentFilter) {
       setSelectedPendingEventId(null);
     }
-  }, [filteredPendingEvents, selectedPendingEventId]);
+  }, [approvalListEvents, selectedPendingEventId]);
+
+  useEffect(() => {
+    if (currentUser?.role === ROLES.ORGANIZER && !visibleModules.some((m) => m.key === activeModule)) {
+      setActiveModule("approval");
+    }
+  }, [activeModule, currentUser?.role, visibleModules]);
+
   const activeModuleData = useMemo(
-    () => ADMIN_MODULES.find((module) => module.key === activeModule) ?? ADMIN_MODULES[0],
-    [activeModule]
+    () => visibleModules.find((module) => module.key === activeModule) ?? visibleModules[0],
+    [activeModule, visibleModules]
   );
   const cycleModule = (direction) => {
-    const currentIndex = ADMIN_MODULES.findIndex((module) => module.key === activeModule);
+    const mods = visibleModules;
+    const currentIndex = mods.findIndex((module) => module.key === activeModule);
     const safeIndex = currentIndex >= 0 ? currentIndex : 0;
-    const nextIndex =
-      (safeIndex + direction + ADMIN_MODULES.length) % ADMIN_MODULES.length;
-    setActiveModule(ADMIN_MODULES[nextIndex].key);
+    const nextIndex = (safeIndex + direction + mods.length) % mods.length;
+    setActiveModule(mods[nextIndex].key);
   };
   const updateModuleLocationFilter = (moduleKey, field, value) => {
     setModuleLocationFilters((prev) => {
@@ -1143,19 +1209,49 @@ function AdminDashboardPage() {
       email: account.email || "",
       role: account.role || "VISITANTE",
       password: "",
+      organizerScopeState: account.organizerScopeState || "",
+      organizerScopeCity: account.organizerScopeCity || "",
+      organizerApprovalScope:
+        account.role === ROLES.ORGANIZER && String(account.organizerScopeCity || "").trim()
+          ? "city"
+          : "state",
     });
   };
 
   const cancelUserEdit = () => {
     setEditingUserId(null);
     setUserActionError("");
-    setUserForm({ name: "", email: "", role: "VISITANTE", password: "" });
+    setUserForm({
+      name: "",
+      email: "",
+      role: "VISITANTE",
+      password: "",
+      organizerScopeState: "",
+      organizerScopeCity: "",
+      organizerApprovalScope: "state",
+    });
   };
 
   const saveUserEdit = (accountId) => {
     try {
       setUserActionError("");
-      updateUserByAdmin(accountId, userForm);
+      if (
+        userForm.role === ROLES.ORGANIZER &&
+        userForm.organizerApprovalScope === "city" &&
+        !String(userForm.organizerScopeCity || "").trim()
+      ) {
+        throw new Error(
+          "Selecione a cidade em que o organizador pode aprovar e criar eventos."
+        );
+      }
+      const { organizerApprovalScope: _scopeUi, ...userPayload } = userForm;
+      updateUserByAdmin(accountId, {
+        ...userPayload,
+        organizerScopeCity:
+          userForm.role === ROLES.ORGANIZER && userForm.organizerApprovalScope === "state"
+            ? ""
+            : userForm.organizerScopeCity,
+      });
       cancelUserEdit();
     } catch (error) {
       setUserActionError(error.message || "Não foi possível atualizar o usuário");
@@ -1174,14 +1270,87 @@ function AdminDashboardPage() {
     }
   };
 
+  const handleApprovalChange = (eventId, status) => {
+    try {
+      setApprovalActionError("");
+      setEventStatus(eventId, status);
+    } catch (error) {
+      setApprovalActionError(error.message || "Não foi possível atualizar o status do evento");
+    }
+  };
+
+  const submitCreateUser = (event) => {
+    event.preventDefault();
+    setCreateUserError("");
+    setCreateUserSuccess("");
+    try {
+      if (createUserForm.role === ROLES.VISITOR) {
+        if (!String(createUserForm.profileState || "").trim()) {
+          throw new Error("Selecione o estado do visitante.");
+        }
+        if (!String(createUserForm.profileCity || "").trim()) {
+          throw new Error("Selecione a cidade do visitante.");
+        }
+      }
+      let scopeCity = "";
+      let profileCity = String(createUserForm.profileCity || "").trim();
+      if (createUserForm.role === ROLES.ORGANIZER) {
+        if (!String(createUserForm.profileState || "").trim()) {
+          throw new Error("Selecione o estado em que o organizador atua.");
+        }
+        if (createUserForm.organizerApprovalScope === "city") {
+          if (!String(createUserForm.organizerScopeCity || "").trim()) {
+            throw new Error(
+              "Selecione a cidade em que o organizador pode aprovar e criar eventos."
+            );
+          }
+          scopeCity = String(createUserForm.organizerScopeCity).trim();
+          profileCity = scopeCity;
+        } else {
+          profileCity = "";
+        }
+      }
+      createUserByAdmin({
+        name: createUserForm.name,
+        email: createUserForm.email,
+        password: createUserForm.password,
+        role: createUserForm.role,
+        state: createUserForm.profileState,
+        city: profileCity,
+        organizerScopeState:
+          createUserForm.role === ROLES.ORGANIZER
+            ? String(createUserForm.profileState || "").trim()
+            : "",
+        organizerScopeCity: scopeCity,
+      });
+      setCreateUserSuccess("Usuário criado com sucesso.");
+      setCreateUserForm({
+        name: "",
+        email: "",
+        password: "",
+        role: ROLES.VISITOR,
+        profileState: "",
+        profileCity: "",
+        organizerScopeCity: "",
+        organizerApprovalScope: "state",
+      });
+    } catch (error) {
+      setCreateUserError(error.message || "Não foi possível criar o usuário");
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Painel administrativo</h1>
+      <h1 className="text-3xl font-bold">
+        {isFullAdmin ? "Painel administrativo" : "Área do organizador"}
+      </h1>
       <div className="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
         <aside className="h-fit rounded-lg border bg-card p-3 lg:sticky lg:top-24">
-          <p className="mb-3 text-sm font-semibold text-muted-foreground">Módulos do admin</p>
+          <p className="mb-3 text-sm font-semibold text-muted-foreground">
+            {isFullAdmin ? "Módulos do admin" : "Menu"}
+          </p>
           <div className="space-y-1.5">
-            {ADMIN_MODULES.map((module) => {
+            {visibleModules.map((module) => {
               const Icon = module.icon;
               const isActive = module.key === activeModule;
               return (
@@ -1221,7 +1390,7 @@ function AdminDashboardPage() {
             </CardContent>
           </Card>
 
-          {activeModule === "dashboard" && (
+          {activeModule === "dashboard" && isFullAdmin && (
             <>
               <section className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
                 {dashboardShortcuts.map((item) => (
@@ -1364,7 +1533,7 @@ function AdminDashboardPage() {
             </>
           )}
 
-          {activeModule === "users" && (
+          {activeModule === "users" && isFullAdmin && (
             <Card>
               <CardHeader>
                 <CardTitle>Usuários e status de acesso</CardTitle>
@@ -1443,9 +1612,19 @@ function AdminDashboardPage() {
                         />
                         <Select
                           value={userForm.role}
-                          onChange={(event) =>
-                            setUserForm((prev) => ({ ...prev, role: event.target.value }))
-                          }
+                          onChange={(event) => {
+                            const nextRole = event.target.value;
+                            setUserForm((prev) => ({
+                              ...prev,
+                              role: nextRole,
+                              organizerScopeState:
+                                nextRole === ROLES.ORGANIZER ? prev.organizerScopeState : "",
+                              organizerScopeCity:
+                                nextRole === ROLES.ORGANIZER ? prev.organizerScopeCity : "",
+                              organizerApprovalScope:
+                                nextRole === ROLES.ORGANIZER ? prev.organizerApprovalScope : "state",
+                            }));
+                          }}
                         >
                           <option value="ORGANIZADOR">Organizador</option>
                           <option value="VISITANTE">Visitante</option>
@@ -1458,6 +1637,87 @@ function AdminDashboardPage() {
                           }
                           placeholder="Nova senha (opcional)"
                         />
+                        {userForm.role === ROLES.ORGANIZER && (
+                          <>
+                            <Select
+                              className="md:col-span-2"
+                              value={userForm.organizerScopeState}
+                              onChange={(event) =>
+                                setUserForm((prev) => ({
+                                  ...prev,
+                                  organizerScopeState: event.target.value,
+                                  organizerScopeCity: "",
+                                  organizerApprovalScope: "state",
+                                }))
+                              }
+                            >
+                              <option value="">
+                                {loadingEditOrganizerStates ? "Carregando..." : "Estado de atuação *"}
+                              </option>
+                              {editOrganizerStateOptions.map((state) => (
+                                <option key={state.value} value={state.value}>
+                                  {state.label}
+                                </option>
+                              ))}
+                            </Select>
+                            <div className="md:col-span-2">
+                              <label className="mb-1.5 block text-xs font-medium text-foreground">
+                                Escopo de aprovação e criação de eventos
+                              </label>
+                              <Select
+                                value={userForm.organizerApprovalScope}
+                                onChange={(event) => {
+                                  const next = event.target.value;
+                                  setUserForm((prev) => ({
+                                    ...prev,
+                                    organizerApprovalScope: next,
+                                    organizerScopeCity: next === "state" ? "" : prev.organizerScopeCity,
+                                  }));
+                                }}
+                                disabled={!userForm.organizerScopeState}
+                                title={
+                                  !userForm.organizerScopeState
+                                    ? "Selecione o estado primeiro"
+                                    : undefined
+                                }
+                              >
+                                <option value="state">Todo o estado (todas as cidades deste UF)</option>
+                                <option value="city">Apenas uma cidade específica deste estado</option>
+                              </Select>
+                            </div>
+                            {userForm.organizerApprovalScope === "city" && (
+                              <Select
+                                className="md:col-span-2"
+                                value={userForm.organizerScopeCity}
+                                onChange={(event) =>
+                                  setUserForm((prev) => ({
+                                    ...prev,
+                                    organizerScopeCity: event.target.value,
+                                  }))
+                                }
+                                disabled={!userForm.organizerScopeState || loadingEditOrganizerCities}
+                              >
+                                <option value="">
+                                  {!userForm.organizerScopeState
+                                    ? "Selecione o estado primeiro"
+                                    : loadingEditOrganizerCities
+                                      ? "Carregando cidades..."
+                                      : "Cidade de atuação *"}
+                                </option>
+                                {editOrganizerCityOptions.map((city) => (
+                                  <option key={city} value={city}>
+                                    {city}
+                                  </option>
+                                ))}
+                              </Select>
+                            )}
+                            <p className="text-xs text-muted-foreground md:col-span-2">
+                              O estado define a trava: um organizador do Ceará não aprova eventos de
+                              São Paulo. Em &quot;apenas uma cidade&quot;, ele só age na cidade
+                              escolhida (ainda no mesmo estado).
+                            </p>
+                          </>
+                        )}
                         <div className="flex gap-2 md:col-span-2">
                           <Button size="sm" onClick={() => saveUserEdit(account.id)}>
                             Salvar usuário
@@ -1475,6 +1735,17 @@ function AdminDashboardPage() {
                         </div>
                         <div className="text-muted-foreground">
                           <p>Perfil: {account.role}</p>
+                          {account.role === ROLES.ORGANIZER && (
+                            <p className="text-xs">
+                              {account.organizerScopeState
+                                ? `Atuação: ${account.organizerScopeState}${
+                                    account.organizerScopeCity
+                                      ? ` — ${account.organizerScopeCity}`
+                                      : " (estado inteiro)"
+                                  }`
+                                : "Atuação: não configurada"}
+                            </p>
+                          )}
                           <p>
                             Conta criada:{" "}
                             {account.createdAt
@@ -1546,12 +1817,229 @@ function AdminDashboardPage() {
             </Card>
           )}
 
+          {activeModule === "create-users" && isFullAdmin && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Criar novo usuário</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form className="grid max-w-2xl gap-3 md:grid-cols-2" onSubmit={submitCreateUser}>
+                  <Input
+                    placeholder="Nome completo"
+                    value={createUserForm.name}
+                    onChange={(event) =>
+                      setCreateUserForm((prev) => ({ ...prev, name: event.target.value }))
+                    }
+                    required
+                  />
+                  <Input
+                    type="email"
+                    placeholder="E-mail"
+                    value={createUserForm.email}
+                    onChange={(event) =>
+                      setCreateUserForm((prev) => ({ ...prev, email: event.target.value }))
+                    }
+                    required
+                  />
+                  <Input
+                    type="password"
+                    placeholder="Senha inicial (mín. 4 caracteres)"
+                    value={createUserForm.password}
+                    onChange={(event) =>
+                      setCreateUserForm((prev) => ({ ...prev, password: event.target.value }))
+                    }
+                    required
+                  />
+                  <Select
+                    value={createUserForm.role}
+                    onChange={(event) =>
+                      setCreateUserForm((prev) => ({
+                        ...prev,
+                        role: event.target.value,
+                        profileState: "",
+                        profileCity: "",
+                        organizerScopeCity: "",
+                        organizerApprovalScope: "state",
+                      }))
+                    }
+                  >
+                    <option value={ROLES.VISITOR}>Visitante</option>
+                    <option value={ROLES.ORGANIZER}>Organizador</option>
+                  </Select>
+                  {createUserForm.role === ROLES.VISITOR && (
+                    <div className="md:col-span-2">
+                      <p className="mb-2 text-sm font-medium text-foreground">
+                        Localização do perfil <span className="text-red-600">*</span>
+                      </p>
+                      <div className="grid gap-2 md:grid-cols-2">
+                        <Select
+                          value={createUserForm.profileState}
+                          onChange={(event) =>
+                            setCreateUserForm((prev) => ({
+                              ...prev,
+                              profileState: event.target.value,
+                              profileCity: "",
+                            }))
+                          }
+                          required
+                        >
+                          <option value="">
+                            {loadingCreateProfileStates ? "Carregando..." : "Estado *"}
+                          </option>
+                          {createProfileStateOptions.map((state) => (
+                            <option key={state.value} value={state.value}>
+                              {state.label}
+                            </option>
+                          ))}
+                        </Select>
+                        <Select
+                          value={createUserForm.profileCity}
+                          onChange={(event) =>
+                            setCreateUserForm((prev) => ({
+                              ...prev,
+                              profileCity: event.target.value,
+                            }))
+                          }
+                          disabled={!createUserForm.profileState || loadingCreateProfileCities}
+                          required={Boolean(createUserForm.profileState)}
+                        >
+                          <option value="">
+                            {!createUserForm.profileState
+                              ? "Selecione o estado primeiro"
+                              : loadingCreateProfileCities
+                                ? "Carregando cidades..."
+                                : "Cidade *"}
+                          </option>
+                          {createProfileCityOptions.map((city) => (
+                            <option key={city} value={city}>
+                              {city}
+                            </option>
+                          ))}
+                        </Select>
+                      </div>
+                      <p className="mt-1.5 text-xs text-muted-foreground">
+                        Estado e cidade são obrigatórios e aparecem no perfil do visitante.
+                      </p>
+                    </div>
+                  )}
+                  {createUserForm.role === ROLES.ORGANIZER && (
+                    <div className="space-y-3 rounded-lg border bg-muted/30 p-3 md:col-span-2">
+                      <p className="text-sm font-semibold text-foreground">
+                        Localização e escopo de aprovação{" "}
+                        <span className="font-normal text-red-600">*</span>
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Define onde o organizador pode agir: o estado é obrigatório; em seguida
+                        escolha se ele cobre o UF inteiro ou só uma cidade.
+                      </p>
+                      <Select
+                        value={createUserForm.profileState}
+                        onChange={(event) =>
+                          setCreateUserForm((prev) => ({
+                            ...prev,
+                            profileState: event.target.value,
+                            profileCity: "",
+                            organizerScopeCity: "",
+                            organizerApprovalScope: "state",
+                          }))
+                        }
+                        required
+                      >
+                        <option value="">
+                          {loadingCreateProfileStates ? "Carregando..." : "Estado *"}
+                        </option>
+                        {createProfileStateOptions.map((state) => (
+                          <option key={state.value} value={state.value}>
+                            {state.label}
+                          </option>
+                        ))}
+                      </Select>
+                      <div>
+                        <label className="mb-1.5 block text-xs font-medium text-foreground">
+                          Escopo de aprovação e criação de eventos
+                        </label>
+                        <Select
+                          value={createUserForm.organizerApprovalScope}
+                          onChange={(event) => {
+                            const next = event.target.value;
+                            setCreateUserForm((prev) => ({
+                              ...prev,
+                              organizerApprovalScope: next,
+                              organizerScopeCity: next === "state" ? "" : prev.organizerScopeCity,
+                            }));
+                          }}
+                          disabled={!createUserForm.profileState}
+                          title={
+                            !createUserForm.profileState
+                              ? "Selecione o estado acima primeiro"
+                              : undefined
+                          }
+                        >
+                          <option value="state">Todo o estado (todas as cidades deste UF)</option>
+                          <option value="city">Apenas uma cidade específica deste estado</option>
+                        </Select>
+                      </div>
+                      {createUserForm.organizerApprovalScope === "city" && (
+                        <Select
+                          value={createUserForm.organizerScopeCity}
+                          onChange={(event) =>
+                            setCreateUserForm((prev) => ({
+                              ...prev,
+                              organizerScopeCity: event.target.value,
+                            }))
+                          }
+                          disabled={!createUserForm.profileState || loadingCreateProfileCities}
+                          required
+                        >
+                          <option value="">
+                            {!createUserForm.profileState
+                              ? "Selecione o estado primeiro"
+                              : loadingCreateProfileCities
+                                ? "Carregando cidades..."
+                                : "Cidade de atuação *"}
+                          </option>
+                          {createProfileCityOptions.map((city) => (
+                            <option key={city} value={city}>
+                              {city}
+                            </option>
+                          ))}
+                        </Select>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        Um organizador do Ceará não aprova eventos de São Paulo. No escopo
+                        &quot;cidade&quot;, a lista mostra apenas cidades do estado escolhido.
+                      </p>
+                    </div>
+                  )}
+                  {createUserError && (
+                    <p className="text-sm text-red-600 md:col-span-2">{createUserError}</p>
+                  )}
+                  {createUserSuccess && (
+                    <p className="text-sm text-emerald-600 md:col-span-2">{createUserSuccess}</p>
+                  )}
+                  <div className="md:col-span-2">
+                    <Button type="submit">Criar usuário</Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          )}
+
           {activeModule === "approval" && (
             <Card>
               <CardHeader>
                 <CardTitle>Aprovar ou reprovar eventos</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
+                {currentUser?.role === ROLES.ORGANIZER && (
+                  <p className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm text-primary">
+                    Você vê apenas eventos pendentes no estado (e cidade, se definida) da sua atuação
+                    como organizador.
+                  </p>
+                )}
+                {approvalActionError && (
+                  <p className="text-sm text-red-600">{approvalActionError}</p>
+                )}
                 <div className="space-y-2">
                   <Input
                     value={pendingSearchTerm}
@@ -1595,16 +2083,25 @@ function AdminDashboardPage() {
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Mostrando {paginatedPendingEvents.length} de {filteredPendingEvents.length} evento(s)
+                    Mostrando {paginatedPendingEvents.length} de {approvalListEvents.length} evento(s)
                     pendentes.
                   </p>
                 </div>
                 {pendingEvents.length === 0 && (
                   <p className="text-sm text-muted-foreground">Sem eventos pendentes.</p>
                 )}
-                {pendingEvents.length > 0 && filteredPendingEvents.length === 0 && (
+                {pendingEvents.length > 0 &&
+                  approvalListEvents.length === 0 &&
+                  filteredPendingEvents.length === 0 && (
                   <p className="rounded-lg border p-3 text-sm text-muted-foreground">
                     Nenhum evento pendente encontrado para esta busca.
+                  </p>
+                )}
+                {pendingEvents.length > 0 &&
+                  approvalListEvents.length === 0 &&
+                  filteredPendingEvents.length > 0 && (
+                  <p className="rounded-lg border p-3 text-sm text-muted-foreground">
+                    Nenhum evento pendente na sua área de atuação com os filtros atuais.
                   </p>
                 )}
                 {paginatedPendingEvents.map((event) => (
@@ -1629,20 +2126,20 @@ function AdminDashboardPage() {
                       >
                         <Eye size={16} aria-hidden="true" />
                       </Button>
-                      <Button size="sm" onClick={() => setEventStatus(event.id, "approved")}>
+                      <Button size="sm" onClick={() => handleApprovalChange(event.id, "approved")}>
                         Aprovar
                       </Button>
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => setEventStatus(event.id, "rejected")}
+                        onClick={() => handleApprovalChange(event.id, "rejected")}
                       >
                         Reprovar
                       </Button>
                     </div>
                   </div>
                 ))}
-                {filteredPendingEvents.length > PENDING_EVENTS_PAGE_SIZE && (
+                {approvalListEvents.length > PENDING_EVENTS_PAGE_SIZE && (
                   <div className="flex justify-center pt-2">
                     <div className="flex flex-wrap justify-center gap-2">
                       {pendingPageNumbers.map((pageNumber) => (
@@ -1659,7 +2156,7 @@ function AdminDashboardPage() {
                     </div>
                   </div>
                 )}
-                {filteredPendingEvents.length > 0 && !selectedPendingEvent && (
+                {approvalListEvents.length > 0 && !selectedPendingEvent && (
                   <p className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
                     Clique no ícone de olho para visualizar os dados completos antes de aprovar.
                   </p>
@@ -1723,7 +2220,7 @@ function AdminDashboardPage() {
             </Card>
           )}
 
-          {activeModule === "sponsors" && (
+          {activeModule === "sponsors" && isFullAdmin && (
             <>
               <Card>
                 <CardHeader>
@@ -1994,7 +2491,7 @@ function AdminDashboardPage() {
             </>
           )}
 
-          {activeModule === "events-management" && (
+          {activeModule === "events-management" && isFullAdmin && (
             <Card>
               <CardHeader>
                 <CardTitle>Gestão geral de eventos e calendário</CardTitle>

@@ -4,7 +4,9 @@ import {
   mockEvents,
   mockPendingApprovalEvents,
   mockStressTestEvents,
+  syncShowcaseBannerLocalImages,
 } from "../services/mockData";
+import { organizerCanCreateInLocation, organizerCanModerateEvent } from "../lib/organizerScope";
 import { ROLES, useAuth } from "./AuthContext";
 
 const AppDataContext = createContext(null);
@@ -52,6 +54,11 @@ function appendMissingPendingApprovalEvents(sourceEvents) {
   return [...missing, ...sourceEvents];
 }
 
+function syncStressTestEvents(sourceEvents) {
+  const stressEventsById = new Map(mockStressTestEvents.map((event) => [event.id, event]));
+  return sourceEvents.map((event) => stressEventsById.get(event.id) ?? event);
+}
+
 function sanitizeBanners(sourceBanners) {
   return sourceBanners
     .filter((banner) => banner.position !== "favorites-main")
@@ -62,8 +69,10 @@ function appendMissingDefaultBanners(sourceBanners) {
   const normalizedIncoming = sourceBanners.map((banner) => normalizeBannerTargeting(banner));
   const existingIds = new Set(normalizedIncoming.map((banner) => banner.id));
   const missing = sanitizeBanners(mockBanners).filter((banner) => !existingIds.has(banner.id));
-  if (missing.length === 0) return normalizedIncoming;
-  return [...normalizedIncoming, ...missing];
+  if (missing.length === 0) {
+    return syncShowcaseBannerLocalImages(normalizedIncoming);
+  }
+  return syncShowcaseBannerLocalImages([...normalizedIncoming, ...missing]);
 }
 
 export function AppDataProvider({ children }) {
@@ -80,7 +89,7 @@ export function AppDataProvider({ children }) {
     const raw = localStorage.getItem(STORAGE_EVENTS);
     if (!raw) return mockEvents;
     try {
-      return appendMissingPendingApprovalEvents(JSON.parse(raw));
+      return appendMissingPendingApprovalEvents(syncStressTestEvents(JSON.parse(raw)));
     } catch {
       return mockEvents;
     }
@@ -129,6 +138,14 @@ export function AppDataProvider({ children }) {
 
   const createEvent = (payload) => {
     if (!user) throw new Error("Usuário não autenticado");
+
+    const locState = String(payload.state || "").trim().toUpperCase();
+    const locCity = String(payload.city || "").trim();
+    if (!organizerCanCreateInLocation(user, locState, locCity)) {
+      throw new Error(
+        "Você só pode criar eventos no estado e cidade (ou em todo o estado) definidos para o seu perfil de organizador."
+      );
+    }
 
     const normalizedTicketType = payload.ticketType === "paid" ? "paid" : "free";
     const normalizedTicketPrice =
@@ -200,6 +217,10 @@ export function AppDataProvider({ children }) {
   const setEventStatus = (eventId, status) => {
     const targetEvent = events.find((event) => event.id === eventId);
     if (!targetEvent) return;
+
+    if (user?.role === ROLES.ORGANIZER && !organizerCanModerateEvent(user, targetEvent)) {
+      throw new Error("Este evento está fora da sua área de atuação como organizador.");
+    }
 
     updateEvent(eventId, { status });
 
@@ -323,10 +344,12 @@ export function AppDataProvider({ children }) {
 
   const seedTestEvents = () => {
     setEvents((prev) => {
-      const existingIds = new Set(prev.map((event) => event.id));
+      const testEventsById = new Map(mockStressTestEvents.map((event) => [event.id, event]));
+      const mergedEvents = prev.map((event) => testEventsById.get(event.id) ?? event);
+      const existingIds = new Set(mergedEvents.map((event) => event.id));
       const missingTestEvents = mockStressTestEvents.filter((event) => !existingIds.has(event.id));
-      if (!missingTestEvents.length) return prev;
-      return [...missingTestEvents, ...prev];
+      if (!missingTestEvents.length) return mergedEvents;
+      return [...missingTestEvents, ...mergedEvents];
     });
   };
 

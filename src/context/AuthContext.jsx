@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { mockUsers } from "../services/mockData";
 
 const STORAGE_USERS = "lowmeet_users";
@@ -41,6 +41,8 @@ function withAccessMetrics(user) {
     loginCount: Number(user.loginCount || 0),
     state: String(user.state || "").trim().toUpperCase(),
     city: String(user.city || "").trim(),
+    organizerScopeState: String(user.organizerScopeState || "").trim().toUpperCase(),
+    organizerScopeCity: String(user.organizerScopeCity || "").trim(),
   };
 }
 
@@ -142,6 +144,8 @@ export function AuthProvider({ children }) {
       state: state.trim().toUpperCase(),
       city: city.trim(),
       instagram: "",
+      organizerScopeState: "",
+      organizerScopeCity: "",
       createdAt: now,
       lastLoginAt: now,
       loginCount: 1,
@@ -203,6 +207,57 @@ export function AuthProvider({ children }) {
     setUser((prev) => ({ ...prev, ...updates }));
   };
 
+  const createUserByAdmin = useCallback(
+    ({
+      name,
+      email,
+      password,
+      role,
+      state = "",
+      city = "",
+      organizerScopeState = "",
+      organizerScopeCity = "",
+    }) => {
+      const trimmedName = String(name || "").trim();
+      const normalizedEmail = String(email || "").trim().toLowerCase();
+      const pwd = String(password || "");
+      if (!trimmedName) throw new Error("Informe o nome");
+      if (!normalizedEmail) throw new Error("Informe o e-mail");
+      if (pwd.length < 4) throw new Error("A senha deve ter pelo menos 4 caracteres");
+      if (users.some((c) => String(c.email || "").trim().toLowerCase() === normalizedEmail)) {
+        throw new Error("E-mail já cadastrado");
+      }
+      if (role !== ROLES.VISITOR && role !== ROLES.ORGANIZER) {
+        throw new Error("Selecione visitante ou organizador");
+      }
+      const scopeState = String(organizerScopeState || "").trim().toUpperCase();
+      const scopeCity = String(organizerScopeCity || "").trim();
+      if (role === ROLES.ORGANIZER && !scopeState) {
+        throw new Error("Organizador precisa do estado em que pode aprovar e criar eventos");
+      }
+      const now = getNowIso();
+      const newUser = withAccessMetrics({
+        id: `u-${Date.now()}`,
+        name: trimmedName,
+        email: normalizedEmail,
+        password: pwd,
+        role,
+        bio: "",
+        state: String(state || "").trim().toUpperCase(),
+        city: String(city || "").trim(),
+        instagram: "",
+        organizerScopeState: role === ROLES.ORGANIZER ? scopeState : "",
+        organizerScopeCity: role === ROLES.ORGANIZER ? scopeCity : "",
+        createdAt: now,
+        lastLoginAt: null,
+        loginCount: 0,
+      });
+      setUsers((prev) => [...prev, newUser]);
+      return newUser;
+    },
+    [users]
+  );
+
   const updateUserByAdmin = (userId, updates) => {
     const target = users.find((candidate) => candidate.id === userId);
     if (!target) throw new Error("Usuário não encontrado");
@@ -234,6 +289,27 @@ export function AuthProvider({ children }) {
       state: updates.state !== undefined ? String(updates.state || "").trim().toUpperCase() : target.state,
       city: updates.city !== undefined ? String(updates.city || "").trim() : target.city,
     };
+
+    if (nextRole === ROLES.ORGANIZER) {
+      if (updates.organizerScopeState !== undefined) {
+        normalizedUpdates.organizerScopeState = String(updates.organizerScopeState || "")
+          .trim()
+          .toUpperCase();
+      } else {
+        normalizedUpdates.organizerScopeState = target.organizerScopeState || "";
+      }
+      if (updates.organizerScopeCity !== undefined) {
+        normalizedUpdates.organizerScopeCity = String(updates.organizerScopeCity || "").trim();
+      } else {
+        normalizedUpdates.organizerScopeCity = target.organizerScopeCity || "";
+      }
+      if (!normalizedUpdates.organizerScopeState) {
+        throw new Error("Organizador precisa do estado de atuação");
+      }
+    } else {
+      normalizedUpdates.organizerScopeState = "";
+      normalizedUpdates.organizerScopeCity = "";
+    }
 
     if (typeof updates.password === "string" && updates.password.trim()) {
       normalizedUpdates.password = updates.password.trim();
@@ -275,13 +351,14 @@ export function AuthProvider({ children }) {
       updateProfile,
       updateUserByAdmin,
       deleteUserByAdmin,
+      createUserByAdmin,
       logout,
       register,
       isAdmin: user?.role === ROLES.ADMIN,
       isOrganizer: user?.role === ROLES.ORGANIZER,
       isVisitor: user?.role === ROLES.VISITOR,
     }),
-    [user, users]
+    [user, users, createUserByAdmin]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -10,9 +10,19 @@ import OtpCodeInput from "../components/auth/OtpCodeInput";
 import { useBrazilLocations } from "../hooks/useBrazilLocations";
 
 const TWO_FACTOR_BYPASS_EMAILS = new Set(["teste.bloqueio.banner@lowmeet.com"]);
+const MAIN_ADMIN_EMAIL = "lowmeetlowmeet@gmail.com";
 
 function shouldBypassTwoFactor(email) {
   return TWO_FACTOR_BYPASS_EMAILS.has(String(email || "").trim().toLowerCase());
+}
+
+function hasTwoFactorDeliveryConfigured() {
+  return Boolean(
+    import.meta.env.VITE_2FA_WEBHOOK_URL ||
+      (import.meta.env.VITE_EMAILJS_SERVICE_ID &&
+        import.meta.env.VITE_EMAILJS_TEMPLATE_ID &&
+        import.meta.env.VITE_EMAILJS_PUBLIC_KEY)
+  );
 }
 
 function LoginPage() {
@@ -65,6 +75,13 @@ function LoginPage() {
       } else {
         validateLoginCredentials(form);
         if (shouldBypassTwoFactor(form.email)) {
+          login(form);
+          navigate(nextPath);
+          return;
+        }
+        const isMainAdmin =
+          String(form.email || "").trim().toLowerCase() === MAIN_ADMIN_EMAIL.toLowerCase();
+        if (isMainAdmin && !hasTwoFactorDeliveryConfigured()) {
           login(form);
           navigate(nextPath);
           return;
@@ -139,10 +156,6 @@ function LoginPage() {
           <CardTitle>{isRegister ? "Criar conta" : "Entrar"}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="mb-4 rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
-            Conta principal de administração: <strong>lowmeetlowmeet@gmail.com</strong> /{" "}
-            <strong>admin</strong>
-          </div>
           {favoriteEventId && (
             <div className="mb-4 rounded-lg border border-primary/30 bg-primary/5 p-3 text-xs text-primary">
               Faça login ou cadastro para favoritar este evento e acessar sua lista de

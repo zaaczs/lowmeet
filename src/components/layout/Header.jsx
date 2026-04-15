@@ -37,12 +37,10 @@ function Header() {
   const menuRef = useRef(null);
   const notificationsRef = useRef(null);
 
-  const navItems = [
-    { to: "/", label: "Home", protected: false },
-    { to: "/eventos", label: "Eventos", protected: false },
-    { to: "/patrocinadores", label: "Patrocinadores", protected: false },
-    { to: "/favoritos", label: "Favoritos", protected: true },
-    { to: "/criar-evento", label: "Criar evento", protected: true },
+  const mainNavItems = [
+    { to: "/", label: "Home" },
+    { to: "/eventos", label: "Eventos" },
+    { to: "/patrocinadores", label: "Patrocinadores" },
   ];
 
   useEffect(() => {
@@ -82,43 +80,36 @@ function Header() {
         </Link>
 
         <nav className="hidden items-center gap-6 md:flex">
-          {navItems
-            .filter((item) => !item.protected || user)
-            .map((item) => (
-              <NavLink key={item.to} to={item.to} className={navClass}>
-                {item.label}
-              </NavLink>
-            ))}
+          {mainNavItems.map((item) => (
+            <NavLink key={item.to} to={item.to} className={navClass}>
+              {item.label}
+            </NavLink>
+          ))}
         </nav>
 
         <div className="flex items-center gap-2">
           {user ? (
             <>
-              {user.role === ROLES.ADMIN && (
+              {(user.role === ROLES.ADMIN || user.role === ROLES.ORGANIZER) && (
                 <Link to="/admin" className="hidden md:inline-flex">
                   <Button size="sm" variant="secondary" className="gap-2">
                     <LayoutDashboard size={14} />
-                    Painel
+                    {user.role === ROLES.ADMIN ? "Painel" : "Aprovações"}
                   </Button>
                 </Link>
               )}
               {user && (
                 <Link to="/criar-evento" className="hidden md:inline-flex">
-                  <Button size="sm" className="gap-2">
-                    <PlusCircle size={14} />
-                    Novo
+                  <Button size="sm" className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
+                    <PlusCircle size={14} aria-hidden="true" />
+                    Criar evento
                   </Button>
                 </Link>
               )}
-              <Link to="/favoritos" className="hidden sm:inline-flex md:hidden">
-                <Button size="sm" variant="outline">
-                  <Heart size={14} />
-                </Button>
-              </Link>
-              <Link to="/favoritos" className="hidden md:inline-flex">
+              <Link to="/favoritos" className="inline-flex" aria-label="Favoritos">
                 <Button size="sm" variant="outline" className="gap-2">
-                  <Heart size={14} />
-                  Favoritos
+                  <Heart size={14} aria-hidden="true" />
+                  <span className="hidden sm:inline">Favoritos</span>
                 </Button>
               </Link>
               <div className="relative" ref={notificationsRef}>
@@ -252,21 +243,43 @@ function Header() {
       {mobileMenuOpen && (
         <div className="border-t bg-white md:hidden">
           <nav className="mx-auto flex w-full max-w-7xl flex-col gap-1 px-3 py-3">
-            {navItems
-              .filter((item) => !item.protected || user)
-              .map((item) => (
+            {mainNavItems.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) =>
+                  `rounded-md px-3 py-2 text-sm font-medium ${
+                    isActive ? "bg-primary/10 text-primary" : "text-slate-700 hover:bg-muted"
+                  }`
+                }
+              >
+                {item.label}
+              </NavLink>
+            ))}
+            {user && (
+              <>
                 <NavLink
-                  key={item.to}
-                  to={item.to}
+                  to="/favoritos"
                   className={({ isActive }) =>
                     `rounded-md px-3 py-2 text-sm font-medium ${
                       isActive ? "bg-primary/10 text-primary" : "text-slate-700 hover:bg-muted"
                     }`
                   }
                 >
-                  {item.label}
+                  Favoritos
                 </NavLink>
-              ))}
+                <NavLink
+                  to="/criar-evento"
+                  className={({ isActive }) =>
+                    `rounded-md px-3 py-2 text-sm font-medium ${
+                      isActive ? "bg-primary/10 text-primary" : "text-slate-700 hover:bg-muted"
+                    }`
+                  }
+                >
+                  Criar evento
+                </NavLink>
+              </>
+            )}
             {!user && (
               <Link to="/login" className="pt-2">
                 <Button size="sm" className="w-full">

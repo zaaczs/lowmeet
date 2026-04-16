@@ -1,11 +1,13 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import {
   mockBanners,
   mockEvents,
   mockPendingApprovalEvents,
   mockStressTestEvents,
   syncShowcaseBannerLocalImages,
+  getPartnerShowcaseBannerForPosition,
 } from "../services/mockData";
+import { PARTNER_BANNER_SLOT_POSITIONS, slugCityKeyForBannerSlot } from "../constants/partnerBannerSlots";
 import { organizerCanCreateInLocation, organizerCanModerateEvent } from "../lib/organizerScope";
 import { ROLES, useAuth } from "./AuthContext";
 
@@ -32,6 +34,7 @@ function normalizeBannerTargeting(rawBanner) {
     targetingLevel: normalizedLevel,
     state: normalizedState,
     city: normalizedCity,
+    slotReleased: rawBanner?.slotReleased === true,
   };
 }
 
@@ -251,16 +254,6 @@ export function AppDataProvider({ children }) {
     }));
   };
 
-  const addBanner = (payload) => {
-    const newBanner = normalizeBannerTargeting({
-      id: `bn-${Date.now()}`,
-      ...payload,
-      active: true,
-    });
-    validateBannerCoverage(newBanner);
-    setBanners((prev) => [newBanner, ...prev]);
-  };
-
   const updateBanner = (bannerId, updates) => {
     const currentBanner = banners.find((banner) => banner.id === bannerId);
     if (!currentBanner) return;
@@ -276,6 +269,50 @@ export function AppDataProvider({ children }) {
     if (!current) return;
     updateBanner(bannerId, { active: !current.active });
   };
+
+  const ensurePartnerSlotsForCity = useCallback((state, city) => {
+    const st = String(state || "").trim().toUpperCase();
+    const ct = String(city || "").trim();
+    if (!st || !ct) return;
+
+    setBanners((prev) => {
+      let changed = false;
+      const next = [...prev];
+      const citySlug = slugCityKeyForBannerSlot(ct);
+
+      for (const position of PARTNER_BANNER_SLOT_POSITIONS) {
+        const exists = next.some(
+          (banner) =>
+            String(banner.state || "").trim().toUpperCase() === st &&
+            String(banner.city || "").trim() === ct &&
+            banner.position === position
+        );
+        if (exists) continue;
+
+        const template = getPartnerShowcaseBannerForPosition(position);
+        const id = `bn-slot-${st}-${citySlug}-${position}`;
+        next.push(
+          normalizeBannerTargeting({
+            id,
+            brandName: template?.brandName || "Espaço reservado",
+            type: String(template?.type || "patrocínio"),
+            image: template?.image || "",
+            link: String(template?.link || ""),
+            position,
+            state: st,
+            city: ct,
+            focusY: Number(template?.focusY ?? 50),
+            story: String(template?.story || ""),
+            active: false,
+            slotReleased: false,
+          })
+        );
+        changed = true;
+      }
+
+      return changed ? next : prev;
+    });
+  }, []);
 
   const registerBannerClick = (bannerId) => {
     setBannerClicksById((prev) => {
@@ -376,7 +413,7 @@ export function AppDataProvider({ children }) {
       createEvent,
       updateEvent,
       setEventStatus,
-      addBanner,
+      ensurePartnerSlotsForCity,
       updateBanner,
       toggleBannerStatus,
       registerBannerClick,
@@ -423,7 +460,16 @@ export function AppDataProvider({ children }) {
           return byQuery && byState && byCity && byType && byYear && byMonth && byDay && byDate;
         }),
     }),
-    [events, banners, metrics, user, favoritesByUser, notificationsByUser, bannerClicksById]
+    [
+      events,
+      banners,
+      metrics,
+      user,
+      favoritesByUser,
+      notificationsByUser,
+      bannerClicksById,
+      ensurePartnerSlotsForCity,
+    ]
   );
 
   return (

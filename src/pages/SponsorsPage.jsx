@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Handshake, Lock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import GuestLocationSelector from "../components/common/GuestLocationSelector";
@@ -9,7 +10,11 @@ import {
   WHATSAPP_SEM_LOCALIZACAO,
 } from "../constants/sponsorContactLinks";
 import { SPONSOR_RESERVE_CTA } from "../constants/sponsorCopy";
-import { getPartnerShowcaseGridBanners } from "../services/mockData";
+import { PARTNER_BANNER_SLOT_POSITIONS } from "../constants/partnerBannerSlots";
+import {
+  getPartnerShowcaseBannerForPosition,
+  getPartnerShowcaseGridBanners,
+} from "../services/mockData";
 
 function normalizeTextKey(value) {
   return String(value || "")
@@ -22,32 +27,39 @@ function normalizeTextKey(value) {
 function SponsorsPage() {
   const { banners } = useAppData();
   const { effectiveState, effectiveCity, saveGuestLocation } = useGuestLocation();
-  const activeBanners = banners.filter((banner) => banner.active);
   const resolvedState = String(effectiveState || "").trim().toUpperCase();
   const resolvedCity = String(effectiveCity || "").trim();
   const hasCityTargeting = Boolean(resolvedState && resolvedCity);
   const stateKey = normalizeTextKey(resolvedState);
   const cityKey = normalizeTextKey(resolvedCity);
-  const citySponsors = activeBanners.filter(
-    (banner) =>
-      normalizeTextKey(banner.state) === stateKey && normalizeTextKey(banner.city) === cityKey
-  );
-  const hasCitySponsor = citySponsors.length > 0;
-  const shouldShowCityPlaceholder = hasCityTargeting && !hasCitySponsor;
   const isLocationPreviewLock = !hasCityTargeting;
 
-  const allSponsors = Array.from(
-    new Map(activeBanners.map((banner) => [banner.brandName, banner])).values()
-  );
-  const citySponsorsUnique = Array.from(
-    new Map(citySponsors.map((banner) => [banner.brandName, banner])).values()
-  );
-
-  const sponsors = isLocationPreviewLock
-    ? getPartnerShowcaseGridBanners()
-    : hasCityTargeting && hasCitySponsor
-      ? citySponsorsUnique
-      : allSponsors;
+  const sponsors = useMemo(() => {
+    if (!hasCityTargeting) {
+      return getPartnerShowcaseGridBanners();
+    }
+    const inCity = banners.filter(
+      (banner) =>
+        normalizeTextKey(banner.state) === stateKey &&
+        normalizeTextKey(banner.city) === cityKey &&
+        PARTNER_BANNER_SLOT_POSITIONS.includes(banner.position)
+    );
+    const byPosition = new Map(inCity.map((banner) => [banner.position, banner]));
+    return PARTNER_BANNER_SLOT_POSITIONS.map((position) => {
+      const existing = byPosition.get(position);
+      if (existing) return existing;
+      const demo = getPartnerShowcaseBannerForPosition(position);
+      if (!demo) return null;
+      return {
+        ...demo,
+        id: `demo-slot-${position}-${stateKey}-${cityKey}`,
+        state: resolvedState,
+        city: resolvedCity,
+        slotReleased: false,
+        active: false,
+      };
+    }).filter(Boolean);
+  }, [banners, cityKey, hasCityTargeting, resolvedCity, resolvedState, stateKey]);
 
   const lockedCardHref = isLocationPreviewLock ? WHATSAPP_SEM_LOCALIZACAO : WHATSAPP_RESERVA_BANNER_CIDADE;
 
@@ -78,11 +90,20 @@ function SponsorsPage() {
       <p className="max-w-4xl text-sm text-muted-foreground">
         Conheça as marcas que fortalecem o LowMeet e ajudam a cena automotiva a crescer.
         Cada parceiro contribui com história, estrutura e apoio para os eventos da comunidade.
+        {hasCityTargeting ? (
+          <span>
+            {" "}
+            Os seis espaços da sua cidade aparecem sempre: enquanto estiverem bloqueados comercialmente,
+            continuam como exemplo visual (cadeado) até a liberação do patrocínio.
+          </span>
+        ) : null}
       </p>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {sponsors.map((sponsor) => {
-          const showLockedOverlay = isLocationPreviewLock || shouldShowCityPlaceholder;
+          const cardIsLive =
+            hasCityTargeting && sponsor.slotReleased === true && sponsor.active === true;
+          const showLockedOverlay = isLocationPreviewLock || (hasCityTargeting && !cardIsLive);
 
           const sponsorCard = (
             <Card
@@ -97,7 +118,7 @@ function SponsorsPage() {
                   className={`h-full w-full object-cover transition-transform duration-500 ${
                     isLocationPreviewLock
                       ? "opacity-35 blur-[1.5px] group-hover:scale-105"
-                      : shouldShowCityPlaceholder
+                      : showLockedOverlay && hasCityTargeting
                         ? "opacity-30 blur-[1.5px] group-hover:scale-105"
                         : ""
                   }`}
@@ -148,7 +169,7 @@ function SponsorsPage() {
                   </a>
                 )}
               </CardContent>
-              {shouldShowCityPlaceholder && !isLocationPreviewLock ? (
+              {showLockedOverlay && hasCityTargeting ? (
                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/65 px-4 text-center text-white transition-colors duration-300 group-hover:bg-black/55">
                   <Lock
                     size={18}

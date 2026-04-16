@@ -75,7 +75,10 @@ function BannerCarousel({ position = "topo", compact = false, currentState = "",
   const stateKey = normalizeTextKey(resolvedState);
 
   const byPosition = useMemo(
-    () => banners.filter((banner) => banner.active && banner.position === position),
+    () =>
+      banners.filter(
+        (banner) => banner.active && banner.slotReleased && banner.position === position
+      ),
     [banners, position]
   );
 

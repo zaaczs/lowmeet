@@ -97,7 +97,7 @@ export async function sendTwoFactorCode(email) {
   }
 
   throw new Error(
-    "Envio de e-mail não configurado. Defina VITE_2FA_WEBHOOK_URL ou EMAILJS no .env."
+    "Envio de e-mail não configurado. Defina VITE_2FA_WEBHOOK_URL ou as variáveis VITE_EMAILJS_SERVICE_ID, VITE_EMAILJS_TEMPLATE_ID e VITE_EMAILJS_PUBLIC_KEY (e faça um novo build)."
   );
 }
 

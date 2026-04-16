@@ -175,14 +175,21 @@ function LoginPage() {
           <p className="mt-2 max-w-md text-sm text-muted-foreground sm:text-base">
             Eventos e encontros automotivos perto de você.
           </p>
-          <img
-            src={loginHeroCar}
-            alt="Ilustração de carro esportivo"
-            className="mt-4 h-auto w-full max-w-[min(1100px,94vw)] object-contain object-bottom drop-shadow-[0_22px_48px_rgba(15,23,42,0.18)] lg:mt-6 lg:max-h-[min(72vh,688px)]"
-            width={1100}
-            height={688}
-            decoding="async"
-          />
+          <div className="relative mt-4 w-full max-w-[min(1100px,94vw)] lg:mt-6">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute bottom-[6%] left-1/2 z-0 h-[min(18%,120px)] w-[min(72%,720px)] -translate-x-1/2 rounded-[100%] bg-slate-900/[0.12] blur-2xl"
+            />
+            <img
+              src={loginHeroCar}
+              alt="Ilustração de carro esportivo"
+              className="relative z-[1] mx-auto h-auto w-full object-contain object-bottom lg:max-h-[min(72vh,688px)]"
+              width={1100}
+              height={688}
+              decoding="sync"
+              fetchPriority="high"
+            />
+          </div>
         </div>
         <div className="w-full max-w-md shrink-0 lg:max-w-[26rem]">
           <Card className="shadow-lg">

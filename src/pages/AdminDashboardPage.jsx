@@ -32,6 +32,7 @@ import { ROLES, useAuth } from "../context/AuthContext";
 import { organizerCanModerateEvent } from "../lib/organizerScope";
 import { processImageUpload } from "../lib/imageProcessing";
 import { useBrazilLocations } from "../hooks/useBrazilLocations";
+import { PARTNER_BANNER_SLOT_POSITIONS } from "../constants/partnerBannerSlots";
 
 const BANNER_TARGET_WIDTH = 1280;
 const BANNER_TARGET_HEIGHT = 854;
@@ -624,6 +625,175 @@ function BannerImageEditor({ editor, setEditor, helperText }) {
   );
 }
 
+function PartnershipBannerEditorForm({
+  bannerEditForm,
+  setBannerEditForm,
+  bannerEditImageEditor,
+  setBannerEditImageEditor,
+  bannerEditError,
+  bannerEditImageInfo,
+  setBannerEditError,
+  setBannerEditImageInfo,
+  readImageAsDataUrl,
+  loadingBannerStates,
+  loadingBannerCities,
+  bannerStateOptions,
+  bannerCityOptions,
+  onSave,
+  onCancel,
+  saveLabel = "Salvar",
+  lockSlotFields = false,
+}) {
+  return (
+    <div className="grid gap-2 md:grid-cols-2 text-sm">
+      <Input
+        value={bannerEditForm.brandName}
+        onChange={(event) =>
+          setBannerEditForm((prev) => ({
+            ...prev,
+            brandName: event.target.value,
+          }))
+        }
+        placeholder="Nome do patrocinador"
+      />
+      <Input
+        type="file"
+        accept="image/*,.heic,.heif"
+        onChange={(event) =>
+          readImageAsDataUrl(
+            event.target.files?.[0],
+            setBannerEditImageEditor,
+            setBannerEditError,
+            setBannerEditImageInfo,
+            Number(bannerEditImageEditor?.focusY ?? bannerEditForm.focusY ?? 50)
+          )
+        }
+      />
+      {bannerEditError && <p className="text-xs text-red-600 md:col-span-2">{bannerEditError}</p>}
+      {bannerEditImageInfo && (
+        <p className="text-xs text-muted-foreground md:col-span-2">
+          Dimensão final: {bannerEditImageInfo.width} x {bannerEditImageInfo.height}
+        </p>
+      )}
+      <div className="md:col-span-2">
+        <BannerImageEditor
+          editor={bannerEditImageEditor}
+          setEditor={setBannerEditImageEditor}
+          helperText="Arraste para ajustar e use -/+ para zoom."
+        />
+      </div>
+      <Input
+        value={bannerEditForm.link}
+        onChange={(event) =>
+          setBannerEditForm((prev) => ({
+            ...prev,
+            link: event.target.value,
+          }))
+        }
+        placeholder="Link (site ou WhatsApp)"
+      />
+      <Select
+        value={bannerEditForm.position}
+        onChange={(event) =>
+          setBannerEditForm((prev) => ({
+            ...prev,
+            position: event.target.value,
+          }))
+        }
+        disabled={lockSlotFields}
+      >
+        <option value="home-top">Home - Topo</option>
+        <option value="home-middle">Home - Meio</option>
+        <option value="home-bottom">Home - Rodapé da seção</option>
+        <option value="events-top">Eventos - Topo</option>
+        <option value="events-after-calendar">Eventos - Abaixo do calendário</option>
+        <option value="events-bottom">Eventos - Final da página</option>
+      </Select>
+      <Select
+        value={bannerEditForm.state}
+        onChange={(event) =>
+          setBannerEditForm((prev) => ({
+            ...prev,
+            state: event.target.value,
+            city: "",
+          }))
+        }
+        disabled={lockSlotFields}
+      >
+        <option value="">
+          {loadingBannerStates ? "Carregando estados..." : "Selecione o estado"}
+        </option>
+        {bannerStateOptions.map((state) => (
+          <option key={state.value} value={state.value}>
+            {state.label}
+          </option>
+        ))}
+      </Select>
+      <Select
+        value={bannerEditForm.city}
+        onChange={(event) =>
+          setBannerEditForm((prev) => ({
+            ...prev,
+            city: event.target.value,
+          }))
+        }
+        disabled={!bannerEditForm.state || lockSlotFields}
+      >
+        <option value="">
+          {!bannerEditForm.state
+            ? "Selecione o estado primeiro"
+            : loadingBannerCities
+              ? "Carregando cidades..."
+              : "Selecione a cidade"}
+        </option>
+        {bannerCityOptions.map((city) => (
+          <option key={city} value={city}>
+            {city}
+          </option>
+        ))}
+      </Select>
+      <div className="md:col-span-2">
+        <label className="mb-1 block text-xs font-medium text-muted-foreground">
+          Status comercial (site)
+        </label>
+        <Select
+          value={bannerEditForm.slotReleased ? "released" : "blocked"}
+          onChange={(event) =>
+            setBannerEditForm((prev) => ({
+              ...prev,
+              slotReleased: event.target.value === "released",
+            }))
+          }
+        >
+          <option value="blocked">Bloqueado — não aparece na vitrine (contrato em aberto)</option>
+          <option value="released">Liberado — pode aparecer se o banner estiver ativo</option>
+        </Select>
+      </div>
+      <p className="text-xs text-muted-foreground md:col-span-2">
+        Regra atual: múltiplos patrocinadores podem ficar ativos na mesma cidade.
+      </p>
+      <Input
+        value={bannerEditForm.type}
+        onChange={(event) =>
+          setBannerEditForm((prev) => ({
+            ...prev,
+            type: event.target.value,
+          }))
+        }
+        placeholder="Segmento (ex: Estética automotiva)"
+      />
+      <div className="flex flex-wrap gap-2 md:col-span-2">
+        <Button size="sm" onClick={onSave}>
+          {saveLabel}
+        </Button>
+        <Button size="sm" variant="outline" onClick={onCancel}>
+          Cancelar
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function AdminDashboardPage() {
   const {
     users,
@@ -639,6 +809,7 @@ function AdminDashboardPage() {
     setEventStatus,
     updateEvent,
     banners,
+    ensurePartnerSlotsForCity,
     updateBanner,
     toggleBannerStatus,
     bannerClickStats,
@@ -664,6 +835,7 @@ function AdminDashboardPage() {
     state: "",
     city: "",
     focusY: 50,
+    slotReleased: false,
   });
   const [bannerEditError, setBannerEditError] = useState("");
   const [bannerEditImageInfo, setBannerEditImageInfo] = useState(null);
@@ -725,6 +897,12 @@ function AdminDashboardPage() {
     loadingStates: loadingEditOrganizerStates,
     loadingCities: loadingEditOrganizerCities,
   } = useBrazilLocations(userForm.organizerScopeState);
+  const {
+    stateOptions: sponsorsFilterStateOptions,
+    cityOptions: sponsorsFilterCityOptions,
+    loadingStates: loadingSponsorsFilterStates,
+    loadingCities: loadingSponsorsFilterCities,
+  } = useBrazilLocations(moduleLocationFilters.sponsors.state);
 
   const isFullAdmin = currentUser?.role === ROLES.ADMIN;
   const visibleModules = useMemo(() => {
@@ -984,25 +1162,40 @@ function AdminDashboardPage() {
     if (currentUser?.role !== ROLES.ORGANIZER) return filteredPendingEvents;
     return filteredPendingEvents.filter((event) => organizerCanModerateEvent(currentUser, event));
   }, [currentUser, filteredPendingEvents]);
-  const sponsorsLocationOptions = useMemo(
-    () =>
-      buildLocationOptions(
-        banners.map((banner) => ({ state: banner.state, city: banner.city })),
-        sponsorsLocationFilter.state
-      ),
-    [banners, sponsorsLocationFilter.state]
-  );
-  const filteredBanners = useMemo(
-    () =>
-      banners.filter((banner) =>
-        matchesStateCityFilter({ state: banner.state, city: banner.city }, sponsorsLocationFilter)
-      ),
-    [banners, sponsorsLocationFilter]
-  );
+  const filteredBanners = useMemo(() => {
+    const st = String(sponsorsLocationFilter.state || "").trim().toUpperCase();
+    const ct = String(sponsorsLocationFilter.city || "").trim();
+    if (!st || !ct) return [];
+    const cityBanners = banners.filter(
+      (banner) =>
+        String(banner.state || "").trim().toUpperCase() === st &&
+        String(banner.city || "").trim() === ct &&
+        PARTNER_BANNER_SLOT_POSITIONS.includes(banner.position)
+    );
+    const byPosition = new Map(cityBanners.map((banner) => [banner.position, banner]));
+    return PARTNER_BANNER_SLOT_POSITIONS.map((position) => byPosition.get(position)).filter(
+      Boolean
+    );
+  }, [banners, sponsorsLocationFilter.state, sponsorsLocationFilter.city]);
   const filteredBannerPerformance = useMemo(() => {
     const allowedIds = new Set(filteredBanners.map((banner) => banner.id));
     return bannerPerformance.filter((banner) => allowedIds.has(banner.id));
   }, [bannerPerformance, filteredBanners]);
+
+  useEffect(() => {
+    if (activeModule !== "sponsors" || !isFullAdmin) return;
+    const st = sponsorsLocationFilter.state;
+    const ct = sponsorsLocationFilter.city;
+    if (!String(st || "").trim() || !String(ct || "").trim()) return;
+    ensurePartnerSlotsForCity(st, ct);
+  }, [
+    activeModule,
+    isFullAdmin,
+    sponsorsLocationFilter.state,
+    sponsorsLocationFilter.city,
+    ensurePartnerSlotsForCity,
+  ]);
+
   const eventsManagementLocationOptions = useMemo(
     () =>
       buildLocationOptions(
@@ -1163,6 +1356,7 @@ function AdminDashboardPage() {
       state: banner.state || "",
       city: banner.city || "",
       focusY: Number(banner.focusY ?? 50),
+      slotReleased: banner.slotReleased === true,
     });
     setBannerEditError("");
     setBannerEditImageInfo({ width: BANNER_TARGET_WIDTH, height: BANNER_TARGET_HEIGHT });
@@ -1172,6 +1366,13 @@ function AdminDashboardPage() {
     } catch {
       setBannerEditImageEditor(null);
     }
+  };
+
+  const cancelBannerEditor = () => {
+    setEditingBannerId(null);
+    setBannerEditImageEditor(null);
+    setBannerEditImageInfo(null);
+    setBannerEditError("");
   };
 
   const saveBannerEdit = async () => {
@@ -1193,9 +1394,7 @@ function AdminDashboardPage() {
         image,
         focusY: Number(bannerEditImageEditor?.focusY ?? bannerEditForm.focusY ?? 50),
       });
-      setEditingBannerId(null);
-      setBannerEditImageEditor(null);
-      setBannerEditImageInfo(null);
+      cancelBannerEditor();
     } catch (error) {
       setBannerEditError(error.message || "Não foi possível salvar o banner.");
     }
@@ -2227,17 +2426,27 @@ function AdminDashboardPage() {
                   <CardTitle>Gestão de parcerias</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
+                  <p className="text-xs text-muted-foreground">
+                    Cada combinação de estado e cidade possui exatamente seis espaços fixos de patrocínio
+                    (posições na home e na página de eventos). Novos locais recebem esses seis registros
+                    automaticamente, começando em <span className="font-medium">Bloqueado</span> até você
+                    preencher o conteúdo e marcar como <span className="font-medium">Liberado</span> após
+                    fechar o patrocinador. Os filtros usam a base oficial de estados e cidades do Brasil.
+                  </p>
                   <div className="grid gap-2 md:grid-cols-3">
                     <Select
                       value={sponsorsLocationFilter.state}
                       onChange={(event) =>
                         updateModuleLocationFilter("sponsors", "state", event.target.value)
                       }
+                      disabled={loadingSponsorsFilterStates}
                     >
-                      <option value="">Todos os estados</option>
-                      {sponsorsLocationOptions.states.map((state) => (
-                        <option key={state} value={state}>
-                          {state}
+                      <option value="">
+                        {loadingSponsorsFilterStates ? "Carregando estados..." : "Todos os estados"}
+                      </option>
+                      {sponsorsFilterStateOptions.map((state) => (
+                        <option key={state.value} value={state.value}>
+                          {state.label}
                         </option>
                       ))}
                     </Select>
@@ -2246,10 +2455,16 @@ function AdminDashboardPage() {
                       onChange={(event) =>
                         updateModuleLocationFilter("sponsors", "city", event.target.value)
                       }
-                      disabled={!sponsorsLocationFilter.state}
+                      disabled={!sponsorsLocationFilter.state || loadingSponsorsFilterCities}
                     >
-                      <option value="">Todas as cidades</option>
-                      {sponsorsLocationOptions.cities.map((city) => (
+                      <option value="">
+                        {!sponsorsLocationFilter.state
+                          ? "Selecione um estado"
+                          : loadingSponsorsFilterCities
+                            ? "Carregando cidades..."
+                            : "Todas as cidades"}
+                      </option>
+                      {sponsorsFilterCityOptions.map((city) => (
                         <option key={city} value={city}>
                           {city}
                         </option>
@@ -2263,143 +2478,34 @@ function AdminDashboardPage() {
                       Limpar filtro de local
                     </Button>
                   </div>
+                  {!sponsorsLocationFilter.state || !sponsorsLocationFilter.city ? (
+                    <p className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
+                      Selecione <span className="font-medium">estado</span> e{" "}
+                      <span className="font-medium">cidade</span> para exibir os seis espaços de
+                      patrocínio desta localização.
+                    </p>
+                  ) : null}
                   {filteredBanners.map((banner) => (
                     <div key={banner.id} className="rounded-lg border p-3 text-sm">
                       {editingBannerId === banner.id ? (
-                        <div className="grid gap-2 md:grid-cols-2">
-                          <Input
-                            value={bannerEditForm.brandName}
-                            onChange={(event) =>
-                              setBannerEditForm((prev) => ({
-                                ...prev,
-                                brandName: event.target.value,
-                              }))
-                            }
-                          />
-                          <Input
-                            type="file"
-                            accept="image/*,.heic,.heif"
-                            onChange={(event) =>
-                              readImageAsDataUrl(
-                                event.target.files?.[0],
-                                setBannerEditImageEditor,
-                                setBannerEditError,
-                                setBannerEditImageInfo,
-                                Number(bannerEditImageEditor?.focusY ?? bannerEditForm.focusY ?? 50)
-                              )
-                            }
-                          />
-                          {bannerEditError && <p className="text-xs text-red-600">{bannerEditError}</p>}
-                          {bannerEditImageInfo && (
-                            <p className="text-xs text-muted-foreground">
-                              Dimensão final: {bannerEditImageInfo.width} x {bannerEditImageInfo.height}
-                            </p>
-                          )}
-                          <div className="md:col-span-2">
-                            <BannerImageEditor
-                              editor={bannerEditImageEditor}
-                              setEditor={setBannerEditImageEditor}
-                              helperText="Arraste para ajustar e use -/+ para zoom."
-                            />
-                          </div>
-                          <Input
-                            value={bannerEditForm.link}
-                            onChange={(event) =>
-                              setBannerEditForm((prev) => ({
-                                ...prev,
-                                link: event.target.value,
-                              }))
-                            }
-                          />
-                          <Select
-                            value={bannerEditForm.position}
-                            onChange={(event) =>
-                              setBannerEditForm((prev) => ({
-                                ...prev,
-                                position: event.target.value,
-                              }))
-                            }
-                          >
-                            <option value="home-top">Home - Topo</option>
-                            <option value="home-middle">Home - Meio</option>
-                            <option value="home-bottom">Home - Rodapé da seção</option>
-                            <option value="events-top">Eventos - Topo</option>
-                            <option value="events-after-calendar">Eventos - Abaixo do calendário</option>
-                            <option value="events-bottom">Eventos - Final da página</option>
-                          </Select>
-                          <Select
-                            value={bannerEditForm.state}
-                            onChange={(event) =>
-                              setBannerEditForm((prev) => ({
-                                ...prev,
-                                state: event.target.value,
-                                city: "",
-                              }))
-                            }
-                            disabled={false}
-                          >
-                            <option value="">
-                              {loadingBannerStates ? "Carregando estados..." : "Selecione o estado"}
-                            </option>
-                            {bannerStateOptions.map((state) => (
-                              <option key={state.value} value={state.value}>
-                                {state.label}
-                              </option>
-                            ))}
-                          </Select>
-                          <Select
-                            value={bannerEditForm.city}
-                            onChange={(event) =>
-                              setBannerEditForm((prev) => ({
-                                ...prev,
-                                city: event.target.value,
-                              }))
-                            }
-                            disabled={!bannerEditForm.state}
-                          >
-                            <option value="">
-                              {!bannerEditForm.state
-                                ? "Selecione o estado primeiro"
-                                : loadingBannerCities
-                                  ? "Carregando cidades..."
-                                  : "Selecione a cidade"}
-                            </option>
-                            {bannerCityOptions.map((city) => (
-                              <option key={city} value={city}>
-                                {city}
-                              </option>
-                            ))}
-                          </Select>
-                          <p className="text-xs text-muted-foreground md:col-span-2">
-                            Regra atual: múltiplos patrocinadores podem ficar ativos na mesma cidade.
-                          </p>
-                          <Input
-                            value={bannerEditForm.type}
-                            onChange={(event) =>
-                              setBannerEditForm((prev) => ({
-                                ...prev,
-                                type: event.target.value,
-                              }))
-                            }
-                            placeholder="Segmento (ex: Estética automotiva)"
-                          />
-                          <div className="flex gap-2">
-                            <Button size="sm" onClick={saveBannerEdit}>
-                              Salvar
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setEditingBannerId(null);
-                                setBannerEditImageEditor(null);
-                                setBannerEditImageInfo(null);
-                              }}
-                            >
-                              Cancelar
-                            </Button>
-                          </div>
-                        </div>
+                        <PartnershipBannerEditorForm
+                          bannerEditForm={bannerEditForm}
+                          setBannerEditForm={setBannerEditForm}
+                          bannerEditImageEditor={bannerEditImageEditor}
+                          setBannerEditImageEditor={setBannerEditImageEditor}
+                          bannerEditError={bannerEditError}
+                          bannerEditImageInfo={bannerEditImageInfo}
+                          setBannerEditError={setBannerEditError}
+                          setBannerEditImageInfo={setBannerEditImageInfo}
+                          readImageAsDataUrl={readImageAsDataUrl}
+                          loadingBannerStates={loadingBannerStates}
+                          loadingBannerCities={loadingBannerCities}
+                          bannerStateOptions={bannerStateOptions}
+                          bannerCityOptions={bannerCityOptions}
+                          onSave={saveBannerEdit}
+                          onCancel={cancelBannerEditor}
+                          lockSlotFields
+                        />
                       ) : (
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <div>
@@ -2424,6 +2530,16 @@ function AdminDashboardPage() {
                               Segmento: {banner.type}
                             </p>
                             <p className="text-muted-foreground">
+                              Status comercial:{" "}
+                              <span
+                                className={
+                                  banner.slotReleased ? "font-semibold text-emerald-700" : "font-semibold text-amber-800"
+                                }
+                              >
+                                {banner.slotReleased ? "Liberado" : "Bloqueado"}
+                              </span>
+                            </p>
+                            <p className="text-muted-foreground">
                               Segmentação: {BANNER_TARGETING_LABELS[banner.targetingLevel || "CITY"]}{" "}
                               {banner.state ? `- ${banner.state}` : ""}
                               {banner.city ? ` / ${banner.city}` : ""}
@@ -2445,9 +2561,12 @@ function AdminDashboardPage() {
                       )}
                     </div>
                   ))}
-                  {filteredBanners.length === 0 && (
+                  {sponsorsLocationFilter.state &&
+                    sponsorsLocationFilter.city &&
+                    filteredBanners.length === 0 && (
                     <p className="rounded-lg border p-3 text-sm text-muted-foreground">
-                      Nenhum patrocinador encontrado para este filtro.
+                      Ainda não há registros para esta cidade — os seis espaços serão criados
+                      automaticamente em instantes. Recarregue a página se esta mensagem persistir.
                     </p>
                   )}
                 </CardContent>
@@ -2466,7 +2585,8 @@ function AdminDashboardPage() {
                       <div>
                         <p className="font-medium">{banner.brandName}</p>
                         <p className="text-muted-foreground">
-                          {banner.type} - {banner.position} - {banner.active ? "ativo" : "inativo"}
+                          {banner.type} - {banner.position} - {banner.active ? "ativo" : "inativo"} —{" "}
+                          {banner.slotReleased ? "liberado" : "bloqueado"}
                         </p>
                       </div>
                       <div className="text-right text-muted-foreground">

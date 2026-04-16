@@ -620,6 +620,7 @@ export const mockBanners = [
     city: "Fortaleza",
     focusY: 42,
     active: true,
+    slotReleased: false,
     story:
       "A TurboMax nasceu da paixão por preparação turbo e acerto fino para projetos de rua e pista. Hoje é referência em performance confiável.",
   },
@@ -635,6 +636,7 @@ export const mockBanners = [
     city: "Fortaleza",
     focusY: 48,
     active: true,
+    slotReleased: false,
     story:
       "A DT Garage Store começou como uma pequena loja de acessórios e virou ponto de encontro de quem busca peças, estilo e suporte para projetos custom.",
   },
@@ -650,6 +652,7 @@ export const mockBanners = [
     city: "Fortaleza",
     focusY: 40,
     active: true,
+    slotReleased: false,
     story:
       "A Morbus Estética atua no ecossistema automotivo apoiando eventos e iniciativas da comunidade, conectando marcas e apaixonados por carros.",
   },
@@ -665,6 +668,7 @@ export const mockBanners = [
     city: "Fortaleza",
     focusY: 45,
     active: true,
+    slotReleased: false,
     story:
       "A Américo Pneus é focada em manutenção especializada e upgrades para veículos esportivos, com histórico forte em track days e encontros técnicos.",
   },
@@ -680,6 +684,7 @@ export const mockBanners = [
     city: "Fortaleza",
     focusY: 52,
     active: true,
+    slotReleased: false,
     story:
       "A Street Customs construiu sua história transformando carros comuns em projetos únicos, valorizando acabamento premium e identidade visual.",
   },
@@ -695,6 +700,7 @@ export const mockBanners = [
     city: "Fortaleza",
     focusY: 38,
     active: true,
+    slotReleased: false,
     story:
       "A West Sons promove ativações com marcas e encontros temáticos, trazendo experiências para o público logo após o calendário de eventos.",
   },

@@ -66,11 +66,11 @@ function Header() {
     <header className="sticky top-0 z-40 border-b bg-white/95 backdrop-blur">
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-3 py-3 md:px-6">
         <Link to="/" className="flex items-center gap-2">
-          <span className="flex h-10 items-center justify-center">
+          <span className="flex h-11 items-center justify-center sm:h-12">
             <img
               src={loweredCarLogo}
               alt="Logo carro rebaixado"
-              className="h-8 w-auto max-w-none object-contain sm:h-9"
+              className="h-10 w-auto max-w-none object-contain sm:h-11"
             />
           </span>
           <div className="hidden sm:block">

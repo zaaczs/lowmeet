@@ -8,6 +8,7 @@ import { ROLES, useAuth } from "../context/AuthContext";
 import { sendTwoFactorCode, verifyTwoFactorCode } from "../services/twoFactorService";
 import OtpCodeInput from "../components/auth/OtpCodeInput";
 import { useBrazilLocations } from "../hooks/useBrazilLocations";
+import loginHeroCar from "../assets/nissanjdm.webp";
 
 const TWO_FACTOR_BYPASS_EMAILS = new Set(["teste.bloqueio.banner@lowmeet.com"]);
 const MAIN_ADMIN_EMAIL = "lowmeetlowmeet@gmail.com";
@@ -132,187 +133,222 @@ function LoginPage() {
 
   if (user) {
     return (
-      <div className="mx-auto w-full max-w-md">
-        <Card>
-          <CardHeader>
-            <CardTitle>Você está autenticado</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <p>{user.name}</p>
-            <p className="text-muted-foreground">
-              {user.email} - {user.role}
+      <div className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-x-hidden bg-gradient-to-br from-slate-100 via-background to-slate-200/50 px-4 py-12">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_45%_at_50%_-5%,hsl(var(--primary)/0.14),transparent)]" />
+        <div className="relative z-10 w-full max-w-md space-y-6 text-center">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-muted-foreground">
+              LowMeet
             </p>
-            <Button onClick={logout}>Sair</Button>
-          </CardContent>
-        </Card>
+            <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+              Low<span className="text-primary">Meet</span>
+            </h1>
+          </div>
+          <Card className="text-left shadow-lg">
+            <CardHeader>
+              <CardTitle>Você está autenticado</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <p>{user.name}</p>
+              <p className="text-muted-foreground">
+                {user.email} - {user.role}
+              </p>
+              <Button onClick={logout}>Sair</Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto w-full max-w-md">
-      <Card>
-        <CardHeader>
-          <CardTitle>{isRegister ? "Criar conta" : "Entrar"}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {favoriteEventId && (
-            <div className="mb-4 rounded-lg border border-primary/30 bg-primary/5 p-3 text-xs text-primary">
-              Faça login ou cadastro para favoritar este evento e acessar sua lista de
-              favoritos.
-            </div>
-          )}
-          <form
-            onSubmit={step === "credentials" ? handleCredentialsSubmit : handleVerifySubmit}
-            className="space-y-3"
-          >
-            {step === "credentials" ? (
-              <>
-                {isRegister && (
-                  <Input
-                    placeholder="Nome"
-                    value={form.name}
-                    onChange={(event) => setField("name", event.target.value)}
-                    required
-                  />
+    <div className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-x-hidden bg-gradient-to-br from-slate-100 via-background to-slate-200/50 px-4 py-10 sm:py-14">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_45%_at_50%_-5%,hsl(var(--primary)/0.14),transparent)]" />
+      <div className="relative z-10 flex w-full max-w-6xl flex-col items-center gap-8 lg:flex-row lg:items-center lg:justify-between lg:gap-10 xl:gap-14">
+        <div className="flex w-full flex-col items-center text-center lg:max-w-none lg:flex-1 lg:items-start lg:text-left">
+          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-muted-foreground">
+            Bem-vindo ao
+          </p>
+          <h1 className="mt-1 text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
+            Low<span className="text-primary">Meet</span>
+          </h1>
+          <p className="mt-2 max-w-md text-sm text-muted-foreground sm:text-base">
+            Eventos e encontros automotivos perto de você.
+          </p>
+          <img
+            src={loginHeroCar}
+            alt="Ilustração de carro esportivo"
+            className="mt-4 h-auto w-full max-w-[min(1100px,94vw)] object-contain object-bottom drop-shadow-[0_22px_48px_rgba(15,23,42,0.18)] lg:mt-6 lg:max-h-[min(72vh,688px)]"
+            width={1100}
+            height={688}
+            decoding="async"
+          />
+        </div>
+        <div className="w-full max-w-md shrink-0 lg:max-w-[26rem]">
+          <Card className="shadow-lg">
+            <CardHeader className="space-y-1">
+              <CardTitle>{isRegister ? "Criar conta" : "Entrar"}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {favoriteEventId && (
+                <div className="mb-4 rounded-lg border border-primary/30 bg-primary/5 p-3 text-xs text-primary">
+                  Faça login ou cadastro para favoritar este evento e acessar sua lista de
+                  favoritos.
+                </div>
+              )}
+              <form
+                onSubmit={step === "credentials" ? handleCredentialsSubmit : handleVerifySubmit}
+                className="space-y-3"
+              >
+                {step === "credentials" ? (
+                  <>
+                    {isRegister && (
+                      <Input
+                        placeholder="Nome"
+                        value={form.name}
+                        onChange={(event) => setField("name", event.target.value)}
+                        required
+                      />
+                    )}
+                    {isRegister && (
+                      <Select
+                        value={form.state}
+                        onChange={(event) => {
+                          const nextState = event.target.value;
+                          setForm((prev) => ({ ...prev, state: nextState, city: "" }));
+                        }}
+                        required
+                      >
+                        <option value="">
+                          {loadingStates ? "Carregando estados..." : "Selecione seu estado"}
+                        </option>
+                        {stateOptions.map((state) => (
+                          <option key={state.value} value={state.value}>
+                            {state.label}
+                          </option>
+                        ))}
+                      </Select>
+                    )}
+                    {isRegister && (
+                      <Select
+                        value={form.city}
+                        onChange={(event) => setField("city", event.target.value)}
+                        disabled={!form.state || loadingCities}
+                        required
+                      >
+                        <option value="">
+                          {!form.state
+                            ? "Selecione o estado primeiro"
+                            : loadingCities
+                              ? "Carregando cidades..."
+                              : "Selecione sua cidade"}
+                        </option>
+                        {cityOptions.map((city) => (
+                          <option key={city} value={city}>
+                            {city}
+                          </option>
+                        ))}
+                      </Select>
+                    )}
+                    <Input
+                      type="email"
+                      placeholder="E-mail"
+                      value={form.email}
+                      onChange={(event) => setField("email", event.target.value)}
+                      required
+                    />
+                    <Input
+                      type="password"
+                      placeholder="Senha"
+                      value={form.password}
+                      onChange={(event) => setField("password", event.target.value)}
+                      required
+                    />
+                    {isRegister && (
+                      <Input
+                        type="password"
+                        placeholder="Confirmar senha"
+                        value={form.confirmPassword}
+                        onChange={(event) => setField("confirmPassword", event.target.value)}
+                        required
+                      />
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm text-muted-foreground">
+                      Digite o código de 6 dígitos enviado para <strong>{form.email}</strong>.
+                    </p>
+                    <OtpCodeInput value={verificationCode} onChange={setVerificationCode} />
+                    <p className="text-xs text-muted-foreground">
+                      O código expira em 10 minutos.
+                    </p>
+                  </>
                 )}
-                {isRegister && (
-                  <Select
-                    value={form.state}
-                    onChange={(event) => {
-                      const nextState = event.target.value;
-                      setForm((prev) => ({ ...prev, state: nextState, city: "" }));
-                    }}
-                    required
-                  >
-                    <option value="">
-                      {loadingStates ? "Carregando estados..." : "Selecione seu estado"}
-                    </option>
-                    {stateOptions.map((state) => (
-                      <option key={state.value} value={state.value}>
-                        {state.label}
-                      </option>
-                    ))}
-                  </Select>
+                {info && <p className="text-sm text-blue-700">{info}</p>}
+                {error && <p className="text-sm text-red-600">{error}</p>}
+                {step === "credentials" ? (
+                  <>
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={isSendingCode}
+                    >
+                      {isSendingCode
+                        ? "Enviando código..."
+                        : isRegister
+                          ? "Continuar cadastro"
+                          : "Continuar"}
+                    </Button>
+                    <button
+                      type="button"
+                      className="text-sm text-primary"
+                      onClick={() => {
+                        setIsRegister((prev) => !prev);
+                        resetVerificationFlow();
+                        setError("");
+                      }}
+                    >
+                      {isRegister
+                        ? "Já possui conta? Entrar"
+                        : "Ainda não tem conta? Criar agora"}
+                    </button>
+                  </>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="submit">
+                      Confirmar código
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={async () => {
+                        setError("");
+                        setInfo("");
+                        try {
+                          const { mode } = await sendTwoFactorCode(form.email);
+                          setInfo(
+                            mode === "webhook"
+                              ? "Novo código enviado para seu e-mail."
+                              : "Novo código enviado por EmailJS."
+                          );
+                        } catch (resendError) {
+                          setError(resendError.message);
+                        }
+                      }}
+                    >
+                      Reenviar código
+                    </Button>
+                    <Button type="button" variant="ghost" onClick={resetVerificationFlow}>
+                      Voltar
+                    </Button>
+                  </div>
                 )}
-                {isRegister && (
-                  <Select
-                    value={form.city}
-                    onChange={(event) => setField("city", event.target.value)}
-                    disabled={!form.state || loadingCities}
-                    required
-                  >
-                    <option value="">
-                      {!form.state
-                        ? "Selecione o estado primeiro"
-                        : loadingCities
-                          ? "Carregando cidades..."
-                          : "Selecione sua cidade"}
-                    </option>
-                    {cityOptions.map((city) => (
-                      <option key={city} value={city}>
-                        {city}
-                      </option>
-                    ))}
-                  </Select>
-                )}
-                <Input
-                  type="email"
-                  placeholder="E-mail"
-                  value={form.email}
-                  onChange={(event) => setField("email", event.target.value)}
-                  required
-                />
-                <Input
-                  type="password"
-                  placeholder="Senha"
-                  value={form.password}
-                  onChange={(event) => setField("password", event.target.value)}
-                  required
-                />
-                {isRegister && (
-                  <Input
-                    type="password"
-                    placeholder="Confirmar senha"
-                    value={form.confirmPassword}
-                    onChange={(event) => setField("confirmPassword", event.target.value)}
-                    required
-                  />
-                )}
-              </>
-            ) : (
-              <>
-                <p className="text-sm text-muted-foreground">
-                  Digite o código de 6 dígitos enviado para <strong>{form.email}</strong>.
-                </p>
-                <OtpCodeInput value={verificationCode} onChange={setVerificationCode} />
-                <p className="text-xs text-muted-foreground">
-                  O código expira em 10 minutos.
-                </p>
-              </>
-            )}
-            {info && <p className="text-sm text-blue-700">{info}</p>}
-            {error && <p className="text-sm text-red-600">{error}</p>}
-            {step === "credentials" ? (
-              <>
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={isSendingCode}
-                >
-                  {isSendingCode
-                    ? "Enviando código..."
-                    : isRegister
-                      ? "Continuar cadastro"
-                      : "Continuar"}
-                </Button>
-                <button
-                  type="button"
-                  className="text-sm text-primary"
-                  onClick={() => {
-                    setIsRegister((prev) => !prev);
-                    resetVerificationFlow();
-                    setError("");
-                  }}
-                >
-                  {isRegister
-                    ? "Já possui conta? Entrar"
-                    : "Ainda não tem conta? Criar agora"}
-                </button>
-              </>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                <Button type="submit">
-                  Confirmar código
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={async () => {
-                    setError("");
-                    setInfo("");
-                    try {
-                      const { mode } = await sendTwoFactorCode(form.email);
-                      setInfo(
-                        mode === "webhook"
-                          ? "Novo código enviado para seu e-mail."
-                          : "Novo código enviado por EmailJS."
-                      );
-                    } catch (resendError) {
-                      setError(resendError.message);
-                    }
-                  }}
-                >
-                  Reenviar código
-                </Button>
-                <Button type="button" variant="ghost" onClick={resetVerificationFlow}>
-                  Voltar
-                </Button>
-              </div>
-            )}
-          </form>
-        </CardContent>
-      </Card>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

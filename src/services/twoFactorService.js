@@ -1,4 +1,5 @@
 import emailjs from "@emailjs/browser";
+import { buildTwoFactorEmailHtml } from "./twoFactorEmailHtml.js";
 
 const STORAGE_2FA_CODES = "lowmeet_2fa_codes";
 const CODE_TTL_MS = 10 * 60 * 1000;
@@ -82,14 +83,16 @@ export async function sendTwoFactorCode(email) {
   }
 
   if (emailJsServiceId && emailJsTemplateId && emailJsPublicKey) {
+    const message = `Seu código de autenticação é ${code}. Válido por 10 minutos.`;
     await emailjs.send(
       emailJsServiceId,
       emailJsTemplateId,
       {
         to_email: email,
         subject: "Código de verificação - LowMeet",
-        message: `Seu código de autenticação é ${code}. Válido por 10 minutos.`,
+        message,
         code,
+        html_content: buildTwoFactorEmailHtml(code, message),
       },
       { publicKey: emailJsPublicKey }
     );

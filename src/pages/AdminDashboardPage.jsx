@@ -814,6 +814,7 @@ function AdminDashboardPage() {
     metrics,
     setEventStatus,
     updateEvent,
+    deleteEvent,
     banners,
     ensurePartnerSlotsForCity,
     updateBanner,
@@ -869,6 +870,7 @@ function AdminDashboardPage() {
   const [createUserError, setCreateUserError] = useState("");
   const [createUserSuccess, setCreateUserSuccess] = useState("");
   const [approvalActionError, setApprovalActionError] = useState("");
+  const [eventManagementError, setEventManagementError] = useState("");
   const [userActionError, setUserActionError] = useState("");
   const [userSearchTerm, setUserSearchTerm] = useState("");
   const [usersPage, setUsersPage] = useState(1);
@@ -1382,6 +1384,23 @@ function AdminDashboardPage() {
   const saveEventEdit = () => {
     updateEvent(editingEventId, eventForm);
     setEditingEventId(null);
+  };
+
+  const removeManagedEvent = (event) => {
+    const confirmed = window.confirm(
+      `Apagar o evento "${event.name}"? Esta ação não pode ser desfeita.`
+    );
+    if (!confirmed) return;
+
+    try {
+      setEventManagementError("");
+      if (editingEventId === event.id) {
+        setEditingEventId(null);
+      }
+      deleteEvent(event.id);
+    } catch (error) {
+      setEventManagementError(error.message || "Não foi possível apagar o evento");
+    }
   };
 
   const startBannerEdit = async (banner) => {
@@ -2705,6 +2724,9 @@ function AdminDashboardPage() {
                     Limpar filtro de local
                   </Button>
                 </div>
+                {eventManagementError && (
+                  <p className="text-sm text-red-600">{eventManagementError}</p>
+                )}
                 {paginatedManagementEvents.map((event) => (
                   <div
                     key={event.id}
@@ -2780,9 +2802,20 @@ function AdminDashboardPage() {
                             {event.status}
                           </p>
                         </div>
-                        <Button size="sm" variant="outline" onClick={() => startEventEdit(event)}>
-                          Editar evento
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" variant="outline" onClick={() => startEventEdit(event)}>
+                            Editar evento
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => removeManagedEvent(event)}
+                            aria-label={`Apagar evento ${event.name}`}
+                            title="Apagar evento"
+                          >
+                            <Trash2 size={14} />
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </div>

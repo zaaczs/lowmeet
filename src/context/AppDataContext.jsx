@@ -437,6 +437,35 @@ export function AppDataProvider({ children }) {
     );
   };
 
+  const deleteEvent = (eventId) => {
+    if (!user) throw new Error("Usuário não autenticado");
+
+    const targetEvent = events.find((event) => event.id === eventId);
+    if (!targetEvent) return;
+
+    if (user?.role === ROLES.ORGANIZER && !organizerCanModerateEvent(user, targetEvent)) {
+      throw new Error("Este evento está fora da sua área de atuação como organizador.");
+    }
+
+    setEvents((prev) => prev.filter((event) => event.id !== eventId));
+    setFavoritesByUser((prev) =>
+      Object.fromEntries(
+        Object.entries(prev).map(([userId, favorites]) => [
+          userId,
+          (favorites ?? []).filter((favoriteId) => favoriteId !== eventId),
+        ])
+      )
+    );
+    setNotificationsByUser((prev) =>
+      Object.fromEntries(
+        Object.entries(prev).map(([userId, notifications]) => [
+          userId,
+          (notifications ?? []).filter((notification) => notification.eventId !== eventId),
+        ])
+      )
+    );
+  };
+
   const setEventStatus = (eventId, status) => {
     const targetEvent = events.find((event) => event.id === eventId);
     if (!targetEvent) return;
@@ -632,6 +661,7 @@ export function AppDataProvider({ children }) {
       metrics,
       createEvent,
       updateEvent,
+      deleteEvent,
       setEventStatus,
       ensurePartnerSlotsForCity,
       updateBanner,

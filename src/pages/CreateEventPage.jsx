@@ -26,7 +26,6 @@ function CreateEventPage() {
     ticketType: "free",
     ticketPrice: "",
     image: "",
-    tags: "",
     cardImageScale: 1,
     cardImageOffsetY: 0,
     heroImageScale: 1,
@@ -89,10 +88,7 @@ function CreateEventPage() {
         cardImageOffsetY: Number(form.cardImageOffsetY) || 0,
         heroImageScale: Number(form.heroImageScale) || 1,
         heroImageOffsetY: Number(form.heroImageOffsetY) || 0,
-        tags: form.tags
-          .split(",")
-          .map((tag) => tag.trim())
-          .filter(Boolean),
+        tags: [],
         image:
           form.image ||
           "https://images.unsplash.com/photo-1485291571150-772bcfc10da5?auto=format&fit=crop&w=1200&q=80",
@@ -224,11 +220,6 @@ function CreateEventPage() {
               Upload automático em qualidade equilibrada (1280px), com bom equilíbrio entre
               nitidez e tamanho do arquivo.
             </p>
-            <Input
-              placeholder="Tags separadas por vírgula"
-              value={form.tags}
-              onChange={(event) => setField("tags", event.target.value)}
-            />
             <p className="text-xs text-muted-foreground">
               Recomendações: capa (cards) 1200x750 e imagem principal 1920x800.
               Se a proporção for diferente, a qualidade visual pode reduzir.

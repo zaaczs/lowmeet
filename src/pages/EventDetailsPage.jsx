@@ -51,8 +51,8 @@ function EventDetailsPage() {
           </Badge>
         ))}
       </div>
-      <h1 className="text-2xl font-bold sm:text-3xl">{event.name}</h1>
-      <p className="max-w-3xl text-muted-foreground">{event.description}</p>
+      <h1 className="break-words text-2xl font-bold sm:text-3xl">{event.name}</h1>
+      <p className="max-w-3xl break-words text-muted-foreground">{event.description}</p>
 
       <Card>
         <CardContent className="space-y-2 pt-5 text-sm">
@@ -60,9 +60,9 @@ function EventDetailsPage() {
             <CalendarClock size={15} />
             {new Date(event.datetime).toLocaleString("pt-BR")}
           </p>
-          <p className="flex items-center gap-2">
-            <MapPinned size={15} />
-            {addressInfo}
+          <p className="flex items-start gap-2 break-words">
+            <MapPinned size={15} className="mt-0.5 shrink-0" />
+            <span>{addressInfo}</span>
           </p>
           <p>
             {ticketInfo}

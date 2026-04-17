@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   mockBanners,
   mockEvents,
@@ -8,6 +8,8 @@ import {
   getPartnerShowcaseBannerForPosition,
 } from "../services/mockData";
 import { PARTNER_BANNER_SLOT_POSITIONS, slugCityKeyForBannerSlot } from "../constants/partnerBannerSlots";
+import { isSupabaseConfigured } from "../lib/supabaseClient";
+import { readStoreJson, writeStoreJson } from "../lib/supabaseKvStore";
 import { organizerCanCreateInLocation, organizerCanModerateEvent } from "../lib/organizerScope";
 import { ROLES, useAuth } from "./AuthContext";
 
@@ -17,6 +19,11 @@ const STORAGE_BANNERS = "lowmeet_banners";
 const STORAGE_FAVORITES = "lowmeet_favorites_by_user";
 const STORAGE_NOTIFICATIONS = "lowmeet_notifications_by_user";
 const STORAGE_BANNER_CLICKS = "lowmeet_banner_clicks";
+const SUPABASE_EVENTS_KEY = "events";
+const SUPABASE_BANNERS_KEY = "banners";
+const SUPABASE_FAVORITES_KEY = "favoritesByUser";
+const SUPABASE_NOTIFICATIONS_KEY = "notificationsByUser";
+const SUPABASE_BANNER_CLICKS_KEY = "bannerClicksById";
 const BANNER_TARGETING_LEVELS = {
   CITY: "CITY",
 };
@@ -119,24 +126,237 @@ export function AppDataProvider({ children }) {
     return raw ? JSON.parse(raw) : {};
   });
 
+  const eventsPersistReadyRef = useRef(!isSupabaseConfigured);
+  const eventsHydratingRef = useRef(false);
+  const initialEventsRef = useRef(events);
+  const bannersPersistReadyRef = useRef(!isSupabaseConfigured);
+  const bannersHydratingRef = useRef(false);
+  const initialBannersRef = useRef(banners);
+  const favoritesPersistReadyRef = useRef(!isSupabaseConfigured);
+  const favoritesHydratingRef = useRef(false);
+  const initialFavoritesRef = useRef(favoritesByUser);
+  const notificationsPersistReadyRef = useRef(!isSupabaseConfigured);
+  const notificationsHydratingRef = useRef(false);
+  const initialNotificationsRef = useRef(notificationsByUser);
+  const clicksPersistReadyRef = useRef(!isSupabaseConfigured);
+  const clicksHydratingRef = useRef(false);
+  const initialClicksRef = useRef(bannerClicksById);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) return undefined;
+    let cancelled = false;
+    eventsHydratingRef.current = true;
+
+    (async () => {
+      const { data, error } = await readStoreJson(SUPABASE_EVENTS_KEY);
+      if (error) {
+        console.error("LowMeet: não foi possível carregar eventos do Supabase", error);
+        eventsPersistReadyRef.current = true;
+        eventsHydratingRef.current = false;
+        return;
+      }
+
+      if (Array.isArray(data) && data.length > 0) {
+        const nextEvents = appendMissingPendingApprovalEvents(syncStressTestEvents(data));
+        if (!cancelled) {
+          setEvents(nextEvents);
+          localStorage.setItem(STORAGE_EVENTS, JSON.stringify(nextEvents));
+        }
+      } else {
+        await writeStoreJson(SUPABASE_EVENTS_KEY, initialEventsRef.current);
+      }
+
+      if (!cancelled) {
+        eventsPersistReadyRef.current = true;
+        eventsHydratingRef.current = false;
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) return undefined;
+    let cancelled = false;
+    bannersHydratingRef.current = true;
+
+    (async () => {
+      const { data, error } = await readStoreJson(SUPABASE_BANNERS_KEY);
+      if (error) {
+        console.error("LowMeet: não foi possível carregar banners do Supabase", error);
+        bannersPersistReadyRef.current = true;
+        bannersHydratingRef.current = false;
+        return;
+      }
+
+      if (Array.isArray(data) && data.length > 0) {
+        const nextBanners = appendMissingDefaultBanners(sanitizeBanners(data));
+        if (!cancelled) {
+          setBanners(nextBanners);
+          localStorage.setItem(STORAGE_BANNERS, JSON.stringify(nextBanners));
+        }
+      } else {
+        await writeStoreJson(SUPABASE_BANNERS_KEY, initialBannersRef.current);
+      }
+
+      if (!cancelled) {
+        bannersPersistReadyRef.current = true;
+        bannersHydratingRef.current = false;
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) return undefined;
+    let cancelled = false;
+    favoritesHydratingRef.current = true;
+
+    (async () => {
+      const { data, error } = await readStoreJson(SUPABASE_FAVORITES_KEY);
+      if (error) {
+        console.error("LowMeet: não foi possível carregar favoritos do Supabase", error);
+        favoritesPersistReadyRef.current = true;
+        favoritesHydratingRef.current = false;
+        return;
+      }
+
+      if (data && typeof data === "object" && !Array.isArray(data)) {
+        if (!cancelled) {
+          setFavoritesByUser(data);
+          localStorage.setItem(STORAGE_FAVORITES, JSON.stringify(data));
+        }
+      } else {
+        await writeStoreJson(SUPABASE_FAVORITES_KEY, initialFavoritesRef.current);
+      }
+
+      if (!cancelled) {
+        favoritesPersistReadyRef.current = true;
+        favoritesHydratingRef.current = false;
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) return undefined;
+    let cancelled = false;
+    notificationsHydratingRef.current = true;
+
+    (async () => {
+      const { data, error } = await readStoreJson(SUPABASE_NOTIFICATIONS_KEY);
+      if (error) {
+        console.error("LowMeet: não foi possível carregar notificações do Supabase", error);
+        notificationsPersistReadyRef.current = true;
+        notificationsHydratingRef.current = false;
+        return;
+      }
+
+      if (data && typeof data === "object" && !Array.isArray(data)) {
+        if (!cancelled) {
+          setNotificationsByUser(data);
+          localStorage.setItem(STORAGE_NOTIFICATIONS, JSON.stringify(data));
+        }
+      } else {
+        await writeStoreJson(SUPABASE_NOTIFICATIONS_KEY, initialNotificationsRef.current);
+      }
+
+      if (!cancelled) {
+        notificationsPersistReadyRef.current = true;
+        notificationsHydratingRef.current = false;
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) return undefined;
+    let cancelled = false;
+    clicksHydratingRef.current = true;
+
+    (async () => {
+      const { data, error } = await readStoreJson(SUPABASE_BANNER_CLICKS_KEY);
+      if (error) {
+        console.error("LowMeet: não foi possível carregar cliques de banners do Supabase", error);
+        clicksPersistReadyRef.current = true;
+        clicksHydratingRef.current = false;
+        return;
+      }
+
+      if (data && typeof data === "object" && !Array.isArray(data)) {
+        if (!cancelled) {
+          setBannerClicksById(data);
+          localStorage.setItem(STORAGE_BANNER_CLICKS, JSON.stringify(data));
+        }
+      } else {
+        await writeStoreJson(SUPABASE_BANNER_CLICKS_KEY, initialClicksRef.current);
+      }
+
+      if (!cancelled) {
+        clicksPersistReadyRef.current = true;
+        clicksHydratingRef.current = false;
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   useEffect(() => {
     localStorage.setItem(STORAGE_FAVORITES, JSON.stringify(favoritesByUser));
+    if (!isSupabaseConfigured) return;
+    if (!favoritesPersistReadyRef.current || favoritesHydratingRef.current) return;
+    writeStoreJson(SUPABASE_FAVORITES_KEY, favoritesByUser).catch((error) => {
+      console.error("LowMeet: não foi possível salvar favoritos no Supabase", error);
+    });
   }, [favoritesByUser]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_EVENTS, JSON.stringify(events));
+    if (!isSupabaseConfigured) return;
+    if (!eventsPersistReadyRef.current || eventsHydratingRef.current) return;
+    writeStoreJson(SUPABASE_EVENTS_KEY, events).catch((error) => {
+      console.error("LowMeet: não foi possível salvar eventos no Supabase", error);
+    });
   }, [events]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_BANNERS, JSON.stringify(banners));
+    if (!isSupabaseConfigured) return;
+    if (!bannersPersistReadyRef.current || bannersHydratingRef.current) return;
+    writeStoreJson(SUPABASE_BANNERS_KEY, banners).catch((error) => {
+      console.error("LowMeet: não foi possível salvar banners no Supabase", error);
+    });
   }, [banners]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_NOTIFICATIONS, JSON.stringify(notificationsByUser));
+    if (!isSupabaseConfigured) return;
+    if (!notificationsPersistReadyRef.current || notificationsHydratingRef.current) return;
+    writeStoreJson(SUPABASE_NOTIFICATIONS_KEY, notificationsByUser).catch((error) => {
+      console.error("LowMeet: não foi possível salvar notificações no Supabase", error);
+    });
   }, [notificationsByUser]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_BANNER_CLICKS, JSON.stringify(bannerClicksById));
+    if (!isSupabaseConfigured) return;
+    if (!clicksPersistReadyRef.current || clicksHydratingRef.current) return;
+    writeStoreJson(SUPABASE_BANNER_CLICKS_KEY, bannerClicksById).catch((error) => {
+      console.error("LowMeet: não foi possível salvar cliques de banners no Supabase", error);
+    });
   }, [bannerClicksById]);
 
   const createEvent = (payload) => {

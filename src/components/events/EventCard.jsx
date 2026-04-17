@@ -55,8 +55,8 @@ function EventCard({ event }) {
           />
         </div>
         <CardHeader className="space-y-2">
-          <div className="flex items-start justify-between gap-2">
-            <CardTitle className="line-clamp-1">{event.name}</CardTitle>
+          <div className="flex min-w-0 items-start justify-between gap-2">
+            <CardTitle className="min-w-0 flex-1 line-clamp-2 sm:line-clamp-1">{event.name}</CardTitle>
             <Badge variant={event.status === "approved" ? "default" : "secondary"}>
               {event.status === "approved" ? "Aprovado" : "Pendente"}
             </Badge>
@@ -82,18 +82,26 @@ function EventCard({ event }) {
             <p>{ticketInfo}</p>
           </div>
         </CardContent>
-        <CardFooter className="justify-between gap-2">
-          <Link to={`/eventos/${event.id}`} className="w-full">
+        <CardFooter className="flex-col gap-2 sm:flex-row sm:items-stretch sm:justify-between">
+          <Link to={`/eventos/${event.id}`} className="w-full sm:min-w-0 sm:flex-1">
             <Button variant="outline" className="w-full">
               Ver detalhes
             </Button>
           </Link>
-          <Button variant="ghost" size="sm" onClick={() => setShareOpen(true)}>
-            <Share2 size={14} />
-          </Button>
-          <Button variant={isFavorite ? "default" : "ghost"} size="sm" onClick={handleFavoriteClick}>
-            <Heart size={14} />
-          </Button>
+          <div className="flex w-full justify-center gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
+            <Button type="button" variant="ghost" size="sm" onClick={() => setShareOpen(true)} aria-label="Compartilhar">
+              <Share2 size={14} />
+            </Button>
+            <Button
+              type="button"
+              variant={isFavorite ? "default" : "ghost"}
+              size="sm"
+              onClick={handleFavoriteClick}
+              aria-label={isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+            >
+              <Heart size={14} />
+            </Button>
+          </div>
         </CardFooter>
       </Card>
       <ShareEventModal event={event} open={shareOpen} onClose={() => setShareOpen(false)} />

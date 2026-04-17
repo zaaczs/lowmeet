@@ -11,15 +11,15 @@ function SearchAutocomplete({ query, onChange, suggestions = [] }) {
         onChange={(event) => onChange(event.target.value)}
       />
       {query.length >= 2 && suggestions.length > 0 && (
-        <Card className="absolute z-30 mt-2 w-full overflow-hidden border bg-white">
+        <Card className="absolute z-30 mt-2 max-h-[min(70vh,24rem)] w-full overflow-y-auto overflow-x-hidden border bg-white shadow-md">
           <div className="divide-y">
             {suggestions.map((event) => (
               <Link
                 key={event.id}
                 to={`/eventos/${event.id}`}
-                className="block px-3 py-2 text-sm hover:bg-muted"
+                className="block min-w-0 px-3 py-2 text-sm hover:bg-muted"
               >
-                <p className="font-medium">{event.name}</p>
+                <p className="break-words font-medium">{event.name}</p>
                 <p className="text-xs text-muted-foreground">
                   {event.type} - {event.city}
                 </p>

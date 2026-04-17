@@ -52,8 +52,8 @@ function GuestLocationSelector({
 
   return (
     <div className="rounded-xl border bg-white/80 px-3 py-2 text-xs text-muted-foreground">
-      <div className="flex flex-wrap items-center gap-2">
-        <p>{helperMessage}</p>
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <p className="min-w-0 flex-1 basis-full break-words sm:basis-auto sm:flex-none">{helperMessage}</p>
         {hasLocation && !isEditing && (
           <>
             <button

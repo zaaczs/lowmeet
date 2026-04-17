@@ -60,7 +60,7 @@ function HomePage() {
           <p className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
             Plataforma moderna de encontros automotivos
           </p>
-          <h1 className="text-3xl font-bold leading-tight md:text-4xl">
+          <h1 className="break-words text-3xl font-bold leading-tight md:text-4xl">
             Descubra, crie e monetize eventos automotivos com o LowMeet
           </h1>
           <p className="text-muted-foreground">

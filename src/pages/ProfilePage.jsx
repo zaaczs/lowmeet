@@ -77,9 +77,9 @@ function ProfilePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <UserRound size={24} className="text-primary" />
-        <h1 className="text-2xl font-bold sm:text-3xl">Meu perfil</h1>
+      <div className="flex min-w-0 items-center gap-2">
+        <UserRound size={24} className="shrink-0 text-primary" />
+        <h1 className="break-words text-2xl font-bold sm:text-3xl">Meu perfil</h1>
       </div>
 
       <section className="grid gap-4 md:grid-cols-3">
@@ -115,7 +115,7 @@ function ProfilePage() {
             <CardTitle>Dados do perfil</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <p>
+            <p className="break-words">
               <span className="font-semibold">E-mail:</span> {user?.email}
             </p>
             <p>

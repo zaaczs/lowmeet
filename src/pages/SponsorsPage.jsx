@@ -70,9 +70,9 @@ function SponsorsPage() {
         cityValue={effectiveCity}
         onSaveLocation={saveGuestLocation}
       />
-      <div className="flex items-center gap-2">
-        <Handshake size={24} className="text-primary" />
-        <h1 className="text-3xl font-bold">Patrocinadores e parceiros</h1>
+      <div className="flex min-w-0 items-start gap-2">
+        <Handshake size={24} className="mt-0.5 shrink-0 text-primary" />
+        <h1 className="break-words text-2xl font-bold sm:text-3xl">Patrocinadores e parceiros</h1>
       </div>
 
       {isLocationPreviewLock ? (
@@ -99,7 +99,7 @@ function SponsorsPage() {
         ) : null}
       </p>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {sponsors.map((sponsor) => {
           const cardIsLive =
             hasCityTargeting && sponsor.slotReleased === true && sponsor.active === true;

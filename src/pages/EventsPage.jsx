@@ -114,12 +114,14 @@ function EventsPage() {
             loadingStates={loadingStates}
             loadingCities={loadingCities}
           />
-          <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
             {seedFeedback && <p className="text-xs text-emerald-600">{seedFeedback}</p>}
-            <Button variant="outline" onClick={handleSeedTestEvents}>
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={handleSeedTestEvents}>
               Inserir eventos de teste
             </Button>
-            <Button onClick={applyFilters}>Aplicar filtros</Button>
+            <Button type="button" className="w-full sm:w-auto" onClick={applyFilters}>
+              Aplicar filtros
+            </Button>
           </div>
         </section>
 

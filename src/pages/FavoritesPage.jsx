@@ -8,9 +8,9 @@ function FavoritesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <Heart className="text-primary" size={22} />
-        <h1 className="text-3xl font-bold">Meus favoritos</h1>
+      <div className="flex min-w-0 items-center gap-2">
+        <Heart className="shrink-0 text-primary" size={22} />
+        <h1 className="break-words text-2xl font-bold sm:text-3xl">Meus favoritos</h1>
       </div>
 
       {favoriteEvents.length === 0 ? (

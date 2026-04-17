@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import {
   BarChart3,
   CalendarCog,
@@ -41,6 +42,10 @@ const HOME_VISIBLE_GUIDE_ASPECT = 4.8;
 const MIN_CROP_WIDTH = 220;
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+function samePendingEventId(a, b) {
+  return a != null && b != null && String(a) === String(b);
+}
 
 const buildDefaultCrop = ({ width, height }) => {
   if (!width || !height) return { x: 0, y: 0, width: BANNER_TARGET_WIDTH, height: BANNER_TARGET_HEIGHT };
@@ -795,6 +800,7 @@ function PartnershipBannerEditorForm({
 }
 
 function AdminDashboardPage() {
+  const location = useLocation();
   const {
     users,
     user: currentUser,
@@ -870,6 +876,7 @@ function AdminDashboardPage() {
   const [pendingPage, setPendingPage] = useState(1);
   const [eventsManagementPage, setEventsManagementPage] = useState(1);
   const [selectedPendingEventId, setSelectedPendingEventId] = useState(null);
+  const pendingEventPreviewRef = useRef(null);
   const [activeModule, setActiveModule] = useState(() =>
     currentUser?.role === ROLES.ORGANIZER ? "approval" : "dashboard"
   );
@@ -1223,7 +1230,9 @@ function AdminDashboardPage() {
     Math.ceil(filteredManagementEvents.length / EVENTS_MANAGEMENT_PAGE_SIZE)
   );
   const selectedPendingEvent = useMemo(
-    () => approvalListEvents.find((event) => event.id === selectedPendingEventId) ?? null,
+    () =>
+      approvalListEvents.find((event) => samePendingEventId(event.id, selectedPendingEventId)) ??
+      null,
     [approvalListEvents, selectedPendingEventId]
   );
   const paginatedUsers = useMemo(() => {
@@ -1272,7 +1281,9 @@ function AdminDashboardPage() {
   }, [totalEventsManagementPages]);
 
   useEffect(() => {
-    const stillExists = pendingEvents.some((event) => event.id === selectedPendingEventId);
+    const stillExists = pendingEvents.some((event) =>
+      samePendingEventId(event.id, selectedPendingEventId)
+    );
     if (!stillExists) {
       setSelectedPendingEventId(null);
     }
@@ -1280,8 +1291,8 @@ function AdminDashboardPage() {
 
   useEffect(() => {
     if (!selectedPendingEventId) return;
-    const isVisibleInCurrentFilter = approvalListEvents.some(
-      (event) => event.id === selectedPendingEventId
+    const isVisibleInCurrentFilter = approvalListEvents.some((event) =>
+      samePendingEventId(event.id, selectedPendingEventId)
     );
     if (!isVisibleInCurrentFilter) {
       setSelectedPendingEventId(null);
@@ -1289,10 +1300,39 @@ function AdminDashboardPage() {
   }, [approvalListEvents, selectedPendingEventId]);
 
   useEffect(() => {
+    if (!selectedPendingEvent) return;
+    pendingEventPreviewRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, [selectedPendingEvent]);
+
+  useEffect(() => {
     if (currentUser?.role === ROLES.ORGANIZER && !visibleModules.some((m) => m.key === activeModule)) {
       setActiveModule("approval");
     }
   }, [activeModule, currentUser?.role, visibleModules]);
+
+  useEffect(() => {
+    const requestedModule = location.state?.initialModule;
+    const requestedEventId = location.state?.focusPendingEventId;
+    if (!requestedModule && !requestedEventId) return;
+
+    if (requestedModule && visibleModules.some((module) => module.key === requestedModule)) {
+      setActiveModule(requestedModule);
+    }
+
+    if (requestedEventId) {
+      setActiveModule("approval");
+      setPendingSearchTerm("");
+      setPendingPage(1);
+      setModuleLocationFilters((prev) => ({
+        ...prev,
+        approval: { state: "", city: "" },
+      }));
+      setSelectedPendingEventId(String(requestedEventId));
+    }
+  }, [location.state, visibleModules]);
 
   const activeModuleData = useMemo(
     () => visibleModules.find((module) => module.key === activeModule) ?? visibleModules[0],
@@ -1540,11 +1580,11 @@ function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">
+      <h1 className="break-words text-2xl font-bold sm:text-3xl">
         {isFullAdmin ? "Painel administrativo" : "Área do organizador"}
       </h1>
-      <div className="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
-        <aside className="h-fit rounded-lg border bg-card p-3 lg:sticky lg:top-24">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)]">
+        <aside className="h-fit min-w-0 rounded-lg border bg-card p-3 lg:sticky lg:top-24">
           <p className="mb-3 text-sm font-semibold text-muted-foreground">
             {isFullAdmin ? "Módulos do admin" : "Menu"}
           </p>
@@ -1579,10 +1619,10 @@ function AdminDashboardPage() {
           </div>
         </aside>
 
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>{activeModuleData.label}</CardTitle>
+              <CardTitle className="text-base sm:text-lg">{activeModuleData.label}</CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground">
               {activeModuleData.description}
@@ -1591,7 +1631,7 @@ function AdminDashboardPage() {
 
           {activeModule === "dashboard" && isFullAdmin && (
             <>
-              <section className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
+              <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
                 {dashboardShortcuts.map((item) => (
                   <Card key={item.title}>
                     <CardHeader>
@@ -1607,7 +1647,7 @@ function AdminDashboardPage() {
                   <CardHeader>
                     <CardTitle>Criação por mês (6 meses)</CardTitle>
                   </CardHeader>
-                  <CardContent className="h-80">
+                  <CardContent className="h-64 min-h-[14rem] sm:h-72 md:h-80">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={monthlyChartData} margin={{ left: 8, right: 12, top: 8 }}>
                         <CartesianGrid strokeDasharray="3 3" />
@@ -1626,7 +1666,7 @@ function AdminDashboardPage() {
                   <CardHeader>
                     <CardTitle>Status dos eventos</CardTitle>
                   </CardHeader>
-                  <CardContent className="h-80">
+                  <CardContent className="h-64 min-h-[14rem] sm:h-72 md:h-80">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
@@ -1653,7 +1693,7 @@ function AdminDashboardPage() {
                   <CardHeader>
                     <CardTitle>Distribuição de usuários</CardTitle>
                   </CardHeader>
-                  <CardContent className="h-80">
+                  <CardContent className="h-64 min-h-[14rem] sm:h-72 md:h-80">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
@@ -1680,7 +1720,7 @@ function AdminDashboardPage() {
                   <CardHeader>
                     <CardTitle>Cliques por patrocinador</CardTitle>
                   </CardHeader>
-                  <CardContent className="h-80">
+                  <CardContent className="h-64 min-h-[14rem] sm:h-72 md:h-80">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
                         data={sponsorsClicksChartData}
@@ -2307,28 +2347,36 @@ function AdminDashboardPage() {
                   <div
                     key={event.id}
                     className={`flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 ${
-                      selectedPendingEventId === event.id ? "border-primary" : ""
+                      samePendingEventId(selectedPendingEventId, event.id) ? "border-primary" : ""
                     }`}
                   >
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <p className="font-medium">{event.name}</p>
                       <p className="text-sm text-muted-foreground">
                         {event.city} - {event.type}
                       </p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="relative z-10 flex shrink-0 flex-wrap gap-2">
                       <Button
+                        type="button"
                         size="sm"
                         variant="outline"
+                        className="h-8 min-h-8 min-w-8 shrink-0 px-0"
                         onClick={() => setSelectedPendingEventId(event.id)}
                         title="Visualizar detalhes"
+                        aria-label={`Visualizar detalhes de ${event.name}`}
                       >
                         <Eye size={16} aria-hidden="true" />
                       </Button>
-                      <Button size="sm" onClick={() => handleApprovalChange(event.id, "approved")}>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => handleApprovalChange(event.id, "approved")}
+                      >
                         Aprovar
                       </Button>
                       <Button
+                        type="button"
                         size="sm"
                         variant="outline"
                         onClick={() => handleApprovalChange(event.id, "rejected")}
@@ -2361,13 +2409,17 @@ function AdminDashboardPage() {
                   </p>
                 )}
                 {selectedPendingEvent && (
-                  <div className="rounded-lg border bg-muted/20 p-4">
+                  <div
+                    ref={pendingEventPreviewRef}
+                    className="scroll-mt-28 rounded-lg border bg-muted/20 p-4"
+                  >
                     <div className="mb-2 flex items-start justify-between gap-3">
                       <div>
                         <p className="text-sm font-semibold">Visualização completa do evento</p>
                         <p className="text-xs text-muted-foreground">{selectedPendingEvent.name}</p>
                       </div>
                       <Button
+                        type="button"
                         size="sm"
                         variant="ghost"
                         onClick={() => setSelectedPendingEventId(null)}

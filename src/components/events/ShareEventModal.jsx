@@ -59,16 +59,16 @@ function ShareEventModal({ event, open, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4 py-8"
       onClick={onClose}
     >
       <Card
-        className="w-full max-w-xl border bg-white shadow-xl"
+        className="my-auto w-full max-h-[90vh] max-w-xl overflow-y-auto border bg-white shadow-xl"
         onClick={(eventClick) => eventClick.stopPropagation()}
       >
         <CardHeader className="flex flex-row items-center justify-between gap-3">
           <CardTitle className="text-xl">Compartilhar evento</CardTitle>
-          <Button size="sm" variant="ghost" onClick={onClose}>
+          <Button type="button" size="sm" variant="ghost" onClick={onClose}>
             <X size={16} />
           </Button>
         </CardHeader>
@@ -78,19 +78,20 @@ function ShareEventModal({ event, open, onClose }) {
             <p className="break-all text-sm">{eventLink}</p>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" className="gap-2" onClick={copyLink}>
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            <Button type="button" variant="secondary" className="w-full gap-2 sm:w-auto" onClick={copyLink}>
               <Copy size={14} />
               {copied ? "Link copiado!" : "Copiar link"}
             </Button>
-            <Button variant="outline" className="gap-2" onClick={copyCaption}>
+            <Button type="button" variant="outline" className="w-full gap-2 sm:w-auto" onClick={copyCaption}>
               <Copy size={14} />
               Copiar texto + link
             </Button>
             {typeof navigator.share === "function" && (
               <Button
+                type="button"
                 variant="outline"
-                className="gap-2"
+                className="w-full gap-2 sm:w-auto"
                 onClick={() =>
                   navigator.share({
                     title: event.name,
@@ -105,8 +106,9 @@ function ShareEventModal({ event, open, onClose }) {
             )}
           </div>
 
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <Button
+              type="button"
               variant="outline"
               className="justify-start gap-2"
               onClick={() => openShare(socialLinks.whatsapp)}
@@ -115,6 +117,7 @@ function ShareEventModal({ event, open, onClose }) {
               WhatsApp
             </Button>
             <Button
+              type="button"
               variant="outline"
               className="justify-start gap-2"
               onClick={() => openShare(socialLinks.facebook)}
@@ -123,6 +126,7 @@ function ShareEventModal({ event, open, onClose }) {
               Facebook
             </Button>
             <Button
+              type="button"
               variant="outline"
               className="justify-start gap-2"
               onClick={() => openShare(socialLinks.x)}
@@ -130,6 +134,7 @@ function ShareEventModal({ event, open, onClose }) {
               <ExternalLink size={14} />X
             </Button>
             <Button
+              type="button"
               variant="outline"
               className="justify-start gap-2"
               onClick={() => openShare(socialLinks.linkedin)}
@@ -138,6 +143,7 @@ function ShareEventModal({ event, open, onClose }) {
               LinkedIn
             </Button>
             <Button
+              type="button"
               variant="outline"
               className="justify-start gap-2"
               onClick={() => openShare(socialLinks.telegram)}
@@ -146,6 +152,7 @@ function ShareEventModal({ event, open, onClose }) {
               Telegram
             </Button>
             <Button
+              type="button"
               variant="outline"
               className="justify-start gap-2"
               onClick={async () => {

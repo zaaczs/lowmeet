@@ -109,7 +109,7 @@ function CreateEventPage() {
   };
 
   return (
-    <Card className="w-full max-w-3xl">
+    <Card className="mx-auto w-full min-w-0 max-w-3xl">
       <CardHeader>
         <CardTitle>Criar novo evento</CardTitle>
       </CardHeader>

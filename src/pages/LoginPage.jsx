@@ -169,7 +169,7 @@ function LoginPage() {
           <p className="text-xs font-semibold uppercase tracking-[0.35em] text-muted-foreground">
             Bem-vindo ao
           </p>
-          <h1 className="mt-1 text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
+          <h1 className="mt-1 break-words text-3xl font-extrabold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
             Low<span className="text-primary">Meet</span>
           </h1>
           <p className="mt-2 max-w-md text-sm text-muted-foreground sm:text-base">

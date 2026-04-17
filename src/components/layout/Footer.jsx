@@ -2,8 +2,8 @@ import profileImage from "../../../501190974_17958817823946559_52050024540533936
 
 function Footer() {
   return (
-    <footer className="border-t bg-white">
-      <div className="mx-auto flex w-full max-w-none flex-col gap-4 px-3 py-6 text-sm text-muted-foreground sm:px-4 md:flex-row md:items-start md:justify-between md:gap-6 md:px-4 lg:px-5 xl:px-6">
+    <footer className="border-t bg-white pb-[env(safe-area-inset-bottom)]">
+      <div className="mx-auto flex w-full min-w-0 max-w-none flex-col gap-4 px-3 py-6 text-sm text-muted-foreground sm:px-4 md:flex-row md:items-start md:justify-between md:gap-6 md:px-4 lg:px-5 xl:px-6">
         <div className="min-w-0 space-y-4 md:max-w-5xl">
           <p className="font-medium text-slate-700">
             LowMeet - Plataforma de eventos automotivos.

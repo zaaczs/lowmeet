@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
 import MainLayout from "./layouts/MainLayout";
 import HomePage from "./pages/HomePage";
 import EventsPage from "./pages/EventsPage";
@@ -27,14 +27,21 @@ function ProtectedRoute({ roles, children }) {
   return children;
 }
 
+function LegacyEventDetailsRedirect() {
+  const { eventId } = useParams();
+  return <Navigate to={`/eventos/${eventId}`} replace />;
+}
+
 function App() {
   return (
     <Routes>
       <Route element={<MainLayout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/eventos" element={<EventsPage />} />
+        <Route path="/events" element={<Navigate to="/eventos" replace />} />
         <Route path="/patrocinadores" element={<SponsorsPage />} />
         <Route path="/eventos/:eventId" element={<EventDetailsPage />} />
+        <Route path="/events/:eventId" element={<LegacyEventDetailsRedirect />} />
         <Route
           path="/favoritos"
           element={

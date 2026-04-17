@@ -1,4 +1,4 @@
-import { Link, NavLink, useLocation } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import {
   Bell,
@@ -24,6 +24,7 @@ const navClass = ({ isActive }) =>
 
 function Header() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
   const {
     notifications,
@@ -62,10 +63,27 @@ function Header() {
     setNotificationMenuOpen(false);
   }, [location.pathname]);
 
+  const handleNotificationClick = (notification) => {
+    markNotificationAsRead(notification.id);
+    setNotificationMenuOpen(false);
+
+    if (
+      notification?.eventId &&
+      (user?.role === ROLES.ADMIN || user?.role === ROLES.ORGANIZER)
+    ) {
+      navigate("/admin", {
+        state: {
+          initialModule: "approval",
+          focusPendingEventId: notification.eventId,
+        },
+      });
+    }
+  };
+
   return (
-    <header className="sticky top-0 z-40 border-b bg-white/95 backdrop-blur">
-      <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-3 py-3 md:px-6">
-        <Link to="/" className="flex items-center gap-2">
+    <header className="sticky top-0 z-40 border-b bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur">
+      <div className="mx-auto flex w-full min-w-0 max-w-7xl items-center justify-between gap-2 px-3 py-3 sm:gap-3 md:px-6">
+        <Link to="/" className="flex min-w-0 shrink-0 items-center gap-2">
           <span className="flex h-11 items-center justify-center sm:h-12">
             <img
               src={loweredCarLogo}
@@ -87,7 +105,7 @@ function Header() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
           {user ? (
             <>
               {(user.role === ROLES.ADMIN || user.role === ROLES.ORGANIZER) && (
@@ -154,7 +172,7 @@ function Header() {
                           <button
                             key={notification.id}
                             type="button"
-                            onClick={() => markNotificationAsRead(notification.id)}
+                            onClick={() => handleNotificationClick(notification)}
                             className={`w-full rounded-lg border px-2 py-2 text-left ${
                               notification.readAt ? "bg-white" : "bg-slate-50"
                             }`}
@@ -185,7 +203,7 @@ function Header() {
                   <span className="hidden md:inline">Perfil</span>
                 </Button>
                 {profileMenuOpen && (
-                  <div className="absolute right-0 top-11 z-50 w-48 rounded-xl border bg-white p-1 shadow-soft">
+                  <div className="absolute right-0 top-11 z-50 w-[min(12rem,calc(100vw-1rem))] rounded-xl border bg-white p-1 shadow-soft">
                     <Link
                       to="/perfil"
                       className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-muted"
@@ -258,6 +276,18 @@ function Header() {
             ))}
             {user && (
               <>
+                {(user.role === ROLES.ADMIN || user.role === ROLES.ORGANIZER) && (
+                  <NavLink
+                    to="/admin"
+                    className={({ isActive }) =>
+                      `rounded-md px-3 py-2 text-sm font-medium ${
+                        isActive ? "bg-primary/10 text-primary" : "text-slate-700 hover:bg-muted"
+                      }`
+                    }
+                  >
+                    {user.role === ROLES.ADMIN ? "Painel admin" : "Aprovações"}
+                  </NavLink>
+                )}
                 <NavLink
                   to="/favoritos"
                   className={({ isActive }) =>

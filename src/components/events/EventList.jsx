@@ -59,7 +59,7 @@ function EventList({ events, itemsPerPage = 0, showNameSearch = false }) {
           Nenhum evento encontrado para os filtros informados.
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {visibleEvents.map((event) => (
             <EventCard key={event.id} event={event} />
           ))}

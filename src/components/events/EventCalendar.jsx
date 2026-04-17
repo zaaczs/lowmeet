@@ -62,7 +62,7 @@ function EventCalendar({ events, onPickEvent, selectedMonth = "" }) {
         </div>
       </CardHeader>
       <CardContent className="space-y-3 pt-4">
-        <div className="-mx-2 overflow-x-auto px-2 pb-1">
+        <div className="-mx-2 overflow-x-auto overscroll-x-contain px-2 pb-1 [touch-action:pan-x]">
           <div className="min-w-[42rem] space-y-2">
             <div className="grid grid-cols-7 gap-2 text-center text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
               {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"].map((day) => (

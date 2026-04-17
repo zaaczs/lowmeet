@@ -34,4 +34,9 @@
     font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
       sans-serif;
   }
+
+  /* Melhor uso em telas com entalhe / gestos de rolagem horizontal */
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
 }

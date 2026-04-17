@@ -1,8 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { runProductionResetIfNeeded } from "../lib/runProductionResetIfNeeded";
+import { isSupabaseConfigured } from "../lib/supabaseClient";
+import { readStoreJson, writeStoreJson } from "../lib/supabaseKvStore";
 import { mockUsers } from "../services/mockData";
 
 const STORAGE_USERS = "lowmeet_users";
 const STORAGE_SESSION = "lowmeet_session";
+const SUPABASE_USERS_KEY = "users";
 
 export const ROLES = {
   ADMIN: "ADMIN",
@@ -46,9 +50,7 @@ function withAccessMetrics(user) {
   };
 }
 
-function getInitialUsers() {
-  const localUsers = localStorage.getItem(STORAGE_USERS);
-  const sourceUsers = localUsers ? JSON.parse(localUsers) : mockUsers;
+function buildNormalizedUsers(sourceUsers) {
   const uniqueByEmail = [];
   const seenEmails = new Set();
 
@@ -75,15 +77,17 @@ function getInitialUsers() {
   });
 
   const usersWithTestVisitors = [...normalized];
-  TEST_VISITOR_USERS.forEach((candidate) => {
-    const alreadyExists = usersWithTestVisitors.some((user) => user.email === candidate.email);
-    if (!alreadyExists) {
-      usersWithTestVisitors.push(withAccessMetrics(candidate));
-    }
-  });
+  if (import.meta.env.DEV) {
+    TEST_VISITOR_USERS.forEach((candidate) => {
+      const alreadyExists = usersWithTestVisitors.some((user) => user.email === candidate.email);
+      if (!alreadyExists) {
+        usersWithTestVisitors.push(withAccessMetrics(candidate));
+      }
+    });
+  }
 
   const hasMainAdmin = usersWithTestVisitors.some((user) => user.email === ADMIN_EMAIL);
-  const users = hasMainAdmin
+  return hasMainAdmin
     ? usersWithTestVisitors
     : [
         ...usersWithTestVisitors,
@@ -95,6 +99,21 @@ function getInitialUsers() {
           role: ROLES.ADMIN,
         }),
       ];
+}
+
+function getInitialUsers() {
+  runProductionResetIfNeeded();
+  const localUsers = localStorage.getItem(STORAGE_USERS);
+  let sourceUsers = mockUsers;
+  if (localUsers) {
+    try {
+      const parsed = JSON.parse(localUsers);
+      sourceUsers = Array.isArray(parsed) ? parsed : mockUsers;
+    } catch {
+      sourceUsers = mockUsers;
+    }
+  }
+  const users = buildNormalizedUsers(sourceUsers);
 
   localStorage.setItem(STORAGE_USERS, JSON.stringify(users));
   return users;
@@ -114,9 +133,58 @@ export function AuthProvider({ children }) {
     }
     return parsed;
   });
+  const usersPersistReadyRef = useRef(!isSupabaseConfigured);
+  const usersHydratingRef = useRef(false);
+  const initialUsersRef = useRef(users);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) return undefined;
+    let cancelled = false;
+    usersHydratingRef.current = true;
+
+    (async () => {
+      const { data, error } = await readStoreJson(SUPABASE_USERS_KEY);
+      if (error) {
+        console.error("LowMeet: não foi possível carregar usuários do Supabase", error);
+        usersPersistReadyRef.current = true;
+        usersHydratingRef.current = false;
+        return;
+      }
+
+      if (Array.isArray(data) && data.length > 0) {
+        const normalizedUsers = buildNormalizedUsers(data);
+        if (cancelled) return;
+        setUsers(normalizedUsers);
+        localStorage.setItem(STORAGE_USERS, JSON.stringify(normalizedUsers));
+        setUser((prev) => {
+          if (!prev) return null;
+          const sameUser = normalizedUsers.find(
+            (candidate) => candidate.id === prev.id || candidate.email === prev.email
+          );
+          return sameUser ? withAccessMetrics(sameUser) : null;
+        });
+      } else {
+        await writeStoreJson(SUPABASE_USERS_KEY, initialUsersRef.current);
+      }
+
+      if (!cancelled) {
+        usersPersistReadyRef.current = true;
+        usersHydratingRef.current = false;
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_USERS, JSON.stringify(users));
+    if (!isSupabaseConfigured) return;
+    if (!usersPersistReadyRef.current || usersHydratingRef.current) return;
+    writeStoreJson(SUPABASE_USERS_KEY, users).catch((error) => {
+      console.error("LowMeet: não foi possível salvar usuários no Supabase", error);
+    });
   }, [users]);
 
   useEffect(() => {

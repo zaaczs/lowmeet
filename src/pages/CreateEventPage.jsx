@@ -9,6 +9,7 @@ import { useBrazilLocations } from "../hooks/useBrazilLocations";
 import { processImageUpload } from "../lib/imageProcessing";
 
 const eventTypes = ["Encontro", "Track Day", "Exposição", "Arrancada"];
+const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
 function CreateEventPage() {
   const { createEvent } = useAppData();
@@ -55,11 +56,15 @@ function CreateEventPage() {
     setImageProcessing(true);
     try {
       const result = await processImageUpload(file, {
-        maxWidth: 1280,
-        quality: 0.9,
+        maxWidth: 1920,
+        quality: 0.92,
       });
       setField("image", result.dataUrl);
       setImageInfo({ width: result.width, height: result.height });
+      setField("cardImageScale", 1);
+      setField("cardImageOffsetY", 0);
+      setField("heroImageScale", 1);
+      setField("heroImageOffsetY", 0);
     } catch (error) {
       setImageError(error.message || "Não foi possível processar a imagem.");
       setField("image", "");
@@ -217,7 +222,7 @@ function CreateEventPage() {
               onChange={(event) => handleImageUpload(event.target.files?.[0])}
             />
             <p className="text-xs text-muted-foreground">
-              Upload automático em qualidade equilibrada (1280px), com bom equilíbrio entre
+              Upload automático em qualidade equilibrada (até 1920px), com bom equilíbrio entre
               nitidez e tamanho do arquivo.
             </p>
             <p className="text-xs text-muted-foreground">
@@ -243,13 +248,14 @@ function CreateEventPage() {
                   <p className="text-xs font-medium text-muted-foreground">
                     Capa do evento (lista/cards)
                   </p>
-                  <div className="h-36 overflow-hidden rounded-lg border bg-slate-100">
+                  <div className="aspect-[8/5] overflow-hidden rounded-lg border bg-slate-100">
                     <img
                       src={form.image}
                       alt="Preview capa do evento"
                       className="h-full w-full object-cover"
                       style={{
-                        transform: `translateY(${form.cardImageOffsetY}%) scale(${form.cardImageScale})`,
+                        objectPosition: `center ${clamp(50 + Number(form.cardImageOffsetY), 0, 100)}%`,
+                        transform: `scale(${form.cardImageScale})`,
                         transformOrigin: "center center",
                       }}
                     />
@@ -261,7 +267,7 @@ function CreateEventPage() {
                     <input
                       type="range"
                       min="1"
-                      max="2"
+                      max="3"
                       step="0.01"
                       value={form.cardImageScale}
                       onChange={(event) => setField("cardImageScale", event.target.value)}
@@ -274,8 +280,8 @@ function CreateEventPage() {
                     </label>
                     <input
                       type="range"
-                      min="-40"
-                      max="40"
+                      min="-50"
+                      max="50"
                       step="1"
                       value={form.cardImageOffsetY}
                       onChange={(event) => setField("cardImageOffsetY", event.target.value)}
@@ -288,13 +294,14 @@ function CreateEventPage() {
                   <p className="text-xs font-medium text-muted-foreground">
                     Imagem principal (página do evento)
                   </p>
-                  <div className="h-36 overflow-hidden rounded-lg border bg-slate-100">
+                  <div className="aspect-[12/5] overflow-hidden rounded-lg border bg-slate-100">
                     <img
                       src={form.image}
                       alt="Preview imagem principal do evento"
                       className="h-full w-full object-cover"
                       style={{
-                        transform: `translateY(${form.heroImageOffsetY}%) scale(${form.heroImageScale})`,
+                        objectPosition: `center ${clamp(50 + Number(form.heroImageOffsetY), 0, 100)}%`,
+                        transform: `scale(${form.heroImageScale})`,
                         transformOrigin: "center center",
                       }}
                     />
@@ -306,7 +313,7 @@ function CreateEventPage() {
                     <input
                       type="range"
                       min="1"
-                      max="2"
+                      max="3"
                       step="0.01"
                       value={form.heroImageScale}
                       onChange={(event) => setField("heroImageScale", event.target.value)}
@@ -319,8 +326,8 @@ function CreateEventPage() {
                     </label>
                     <input
                       type="range"
-                      min="-40"
-                      max="40"
+                      min="-50"
+                      max="50"
                       step="1"
                       value={form.heroImageOffsetY}
                       onChange={(event) => setField("heroImageOffsetY", event.target.value)}

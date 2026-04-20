@@ -18,6 +18,7 @@ function EventDetailsPage() {
     `${event?.street || ""}, ${event?.number || ""}${
       event?.complement ? ` - ${event.complement}` : ""
     }`;
+  const heroOffsetY = Math.min(Math.max(50 + Number(event?.heroImageOffsetY ?? 0), 0), 100);
 
   if (!event) {
     return (
@@ -38,7 +39,8 @@ function EventDetailsPage() {
           alt={event.name}
           className="h-full w-full object-cover"
           style={{
-            transform: `translateY(${event.heroImageOffsetY ?? 0}%) scale(${event.heroImageScale ?? 1})`,
+            objectPosition: `center ${heroOffsetY}%`,
+            transform: `scale(${event.heroImageScale ?? 1})`,
             transformOrigin: "center center",
           }}
         />

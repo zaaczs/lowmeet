@@ -26,6 +26,7 @@ function EventCard({ event }) {
     event.ticketType === "paid"
       ? `Entrada R$ ${Number(event.ticketPrice || 0).toFixed(2).replace(".", ",")}`
       : "Entrada gratuita";
+  const cardOffsetY = Math.min(Math.max(50 + Number(event.cardImageOffsetY ?? 0), 0), 100);
 
   const handleFavoriteClick = () => {
     if (!user) {
@@ -49,7 +50,8 @@ function EventCard({ event }) {
             alt={event.name}
             className="h-full w-full object-cover"
             style={{
-              transform: `translateY(${event.cardImageOffsetY ?? 0}%) scale(${event.cardImageScale ?? 1})`,
+              objectPosition: `center ${cardOffsetY}%`,
+              transform: `scale(${event.cardImageScale ?? 1})`,
               transformOrigin: "center center",
             }}
           />
